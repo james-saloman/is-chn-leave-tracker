@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DG (CSI) – Leave Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <style>
+      *{margin:0;padding:0;box-sizing:border-box}
+      :root{
+      --primary:#1a3c5e;--primary-light:#e8f0fa;--accent:#2563eb;
+      --success:#15803d;--success-bg:#dcfce7;
+      --danger:#dc2626;--danger-bg:#fee2e2;
+      --warn:#b45309;--warn-bg:#fef3c7;
+      --bg:#f4f7fb;--card:#fff;--border:#dde3ef;
+      --text:#1e293b;--muted:#64748b;--subtle:#94a3b8;
+      }
+      body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+      header{background:var(--primary);color:#fff;padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.18)}
+      .logo{display:flex;align-items:center;gap:10px}
+      .logo-icon{width:34px;height:34px;background:#2563eb;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display';font-size:18px;color:#fff;font-weight:400}
+      .logo-name{font-size:17px;font-weight:600;letter-spacing:.3px}
+      .logo-sub{font-size:11px;color:#93c5fd;letter-spacing:.8px;text-transform:uppercase;margin-top:1px}
+      .header-search{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:7px 14px;min-width:220px}
+      .header-search input{background:transparent;border:none;outline:none;color:#fff;font-family:'DM Sans';font-size:14px;width:170px}
+      .header-search input::placeholder{color:#93c5fd}
+      .search-icon{color:#93c5fd;font-size:15px}
+      /*logo style*/
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .logo-icon {
+        width: 45px;
+        height: 45px;
+        border-radius: 10px;
+        overflow: hidden;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .logo-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      /* DRAWER */
+      .drawer-member-info{display:flex;align-items:center;gap:12px;background:#e8f0fa;border-radius:12px;padding:12px;margin-bottom:1rem}
+      .drawer-avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px}
+      .drawer-name{font-size:14px;font-weight:600}
+      .drawer-role{font-size:12px;color:#64748b}
+      .leave-list{display:flex;flex-direction:column;gap:10px}
+      .leave-row{background:#f1f5f9;border:1px solid #dde3ef;border-radius:10px;padding:10px 12px;transition:0.2s}
+      .leave-row:hover{background:#e2e8f0}
+      .leave-row-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+      .leave-dates{font-size:13px;font-weight:600}
+      .leave-days{font-size:11px;background:#dbeafe;color:#2563eb;padding:3px 8px;border-radius:20px;font-weight:500}
+      .leave-reason-text{font-size:12px;color:#64748b}
+      /* WFH badge in drawer */
+      .wfh-badge{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:500;display:inline-block;margin-top:4px}
+      .wfh-yes{background:#dcfce7;color:#15803d}
+      .wfh-no{background:#fee2e2;color:#dc2626}
+
+      nav{background:#fff;border-bottom:1px solid var(--border);padding:0 2rem;display:flex;gap:0;overflow-x:auto;position:sticky;top:64px;z-index:99}
+      .nav-item{display:flex;align-items:center;gap:6px;padding:0 16px;height:46px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;flex-shrink:0}
+      .nav-item:hover{color:var(--accent);border-bottom-color:#bfdbfe}
+      .nav-item.active{color:var(--accent);border-bottom-color:var(--accent)}
+      .nav-badge{background:var(--accent);color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:20px;min-width:18px;text-align:center}
+      .nav-item.zero .nav-badge{background:#e2e8f0;color:var(--muted)}
+      .page-wrap{max-width:1200px;margin:0 auto;padding:2rem 1.5rem}
+      .page-title{font-size:13px;color:var(--muted);margin-bottom:1.5rem;letter-spacing:.3px}
+      .page-title strong{color:var(--text);font-weight:600}
+      .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:1rem}
+      .member-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1rem 1rem;display:flex;flex-direction:column;align-items:center;text-align:center;transition:box-shadow .2s,transform .2s;position:relative}
+      .member-card:hover{box-shadow:0 4px 20px rgba(37,99,235,.10);transform:translateY(-2px)}
+      .member-card.hidden{display:none}
+      .avatar{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;margin-bottom:.75rem;position:relative;flex-shrink:0}
+      .leave-dot{position:absolute;bottom:2px;right:2px;width:12px;height:12px;background:#f59e0b;border-radius:50%;border:2px solid #fff;display:none}
+      .has-leaves .leave-dot{display:block}
+      .member-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px}
+      .member-role{font-size:11.5px;color:var(--muted);margin-bottom:.5rem}
+      .member-id{font-size:10.5px;color:var(--subtle);background:#f1f5f9;border-radius:4px;padding:2px 7px;display:inline-block;margin-bottom:.75rem;letter-spacing:.5px}
+      .leave-count{font-size:11.5px;color:var(--muted);margin-bottom:.85rem}
+      .leave-count span{font-weight:600;color:var(--accent)}
+      .btn-leave{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 0;font-family:'DM Sans';font-size:13px;font-weight:500;cursor:pointer;width:100%;transition:background .2s}
+      .btn-leave:hover{background:#1d4ed8}
+
+      /* SKELETON LOADING */
+      .skeleton-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1rem 1rem;display:flex;flex-direction:column;align-items:center;gap:.6rem}
+      .sk{background:linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:6px}
+      .sk-circle{width:58px;height:58px;border-radius:50%}
+      .sk-line{height:12px;width:80%}
+      .sk-line-sm{height:10px;width:55%}
+      .sk-btn{height:32px;width:100%;border-radius:8px}
+      @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+      .overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .25s}
+      .overlay.show{opacity:1;pointer-events:all}
+      .modal{background:#fff;border-radius:16px;width:min(420px,92vw);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.18);transform:translateY(16px);transition:transform .25s}
+      .overlay.show .modal{transform:translateY(0)}
+      .modal-head{background:var(--primary);color:#fff;padding:1.25rem 1.5rem;display:flex;align-items:center;justify-content:space-between}
+      .modal-head h3{font-size:15px;font-weight:600}
+      .modal-head p{font-size:12px;color:#93c5fd;margin-top:2px}
+      .modal-close{background:none;border:none;color:#93c5fd;font-size:22px;cursor:pointer;line-height:1}
+      .modal-body{padding:1.5rem}
+      .form-row{margin-bottom:1rem}
+      .form-label{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.5px}
+      .form-input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans';font-size:14px;color:var(--text);outline:none;transition:border .2s}
+      .form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.10)}
+      .reason-input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans';font-size:14px;color:var(--text);outline:none;resize:none;transition:border .2s}
+      .reason-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.10)}
+
+      /* WFH Radio Buttons */
+      .radio-group{display:flex;gap:12px;margin-top:4px}
+      .radio-option{display:flex;align-items:center;gap:7px;cursor:pointer;background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:8px 16px;transition:all .2s;flex:1;justify-content:center}
+      .radio-option:hover{border-color:#93c5fd;background:#e8f0fa}
+      .radio-option input[type="radio"]{accent-color:var(--accent);width:15px;height:15px;cursor:pointer}
+      .radio-option span{font-size:13px;font-weight:500;color:var(--text)}
+      .radio-option.selected{border-color:var(--accent);background:#dbeafe}
+      .radio-option.selected span{color:var(--accent)}
+      .wfh-note{font-size:11.5px;color:var(--muted);margin-top:5px;display:block}
+
+      .pin-wrap{display:flex;gap:8px;justify-content:center;margin:4px 0}
+      .pin-input{width:52px;height:52px;border:2px solid var(--border);border-radius:10px;font-size:22px;font-weight:700;text-align:center;font-family:'DM Sans';color:var(--text);outline:none;transition:border .2s;background:#f8fafc}
+      .pin-input:focus{border-color:var(--accent);background:#fff}
+      .pin-note{font-size:11.5px;color:var(--muted);text-align:center;margin-top:6px}
+      .pin-error{font-size:12px;color:var(--danger);text-align:center;margin-top:6px;display:none}
+      .btn-submit{width:100%;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px;font-family:'DM Sans';font-size:14px;font-weight:600;cursor:pointer;margin-top:1rem;transition:background .2s;letter-spacing:.3px}
+      .btn-submit:hover{background:#1d4ed8}
+      .btn-submit:disabled{background:#94a3b8;cursor:not-allowed}
+      .success-msg{text-align:center;padding:1.5rem 0}
+      .success-icon{font-size:48px;margin-bottom:1rem}
+      .success-msg h4{font-size:17px;font-weight:600;color:var(--success);margin-bottom:.5rem}
+      .success-msg p{font-size:13px;color:var(--muted)}
+      .success-close{background:var(--success);color:#fff;border:none;border-radius:8px;padding:9px 28px;font-family:'DM Sans';font-size:13px;font-weight:500;cursor:pointer;margin-top:1rem}
+      .drawer-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:150;display:flex;justify-content:flex-end;opacity:0;pointer-events:none;transition:opacity .25s}
+      .drawer-overlay.show{opacity:1;pointer-events:all}
+      .drawer{background:#fff;width:min(380px,92vw);height:100%;overflow-y:auto;padding:1.5rem;transform:translateX(100%);transition:transform .28s}
+      .drawer-overlay.show .drawer{transform:translateX(0)}
+      .drawer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem}
+      .drawer-head h3{font-size:16px;font-weight:600}
+      .drawer-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)}
+      .no-leaves{text-align:center;color:var(--muted);font-size:13px;padding:2rem 0}
+      .toast{position:fixed;bottom:2rem;right:2rem;background:#1e293b;color:#fff;padding:.75rem 1.2rem;border-radius:10px;font-size:13px;z-index:999;opacity:0;transform:translateY(12px);transition:all .3s;pointer-events:none}
+      .toast.show{opacity:1;transform:translateY(0)}
+      .toast.error{background:#dc2626}
+      @media(max-width:600px){.cards-grid{grid-template-columns:repeat(2,1fr)}.header-search{min-width:140px}.header-search input{width:90px}}
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo">
+        <div class="logo-icon">
+          <img src="image/logo.jpg" alt="Company Logo">
+        </div>
+        <div>
+          <div class="logo-name">DESIGN GROUP </div>
+          <div class="logo-sub">CSI-IS Team - Leave Tracker</div>
+        </div>
+      </div>
+      <div class="header-search">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Search member..." oninput="filterMembers(this.value)">
+      </div>
+    </header>
+    <nav id="navBar">
+      <div class="nav-item active" onclick="showAll(this)">All Members <span class="nav-badge" id="navAll">15</span></div>
+    </nav>
+    <div class="page-wrap">
+      <p class="page-title">Dashboard &rsaquo; <strong>Team Leave Overview</strong></p>
+      <div class="cards-grid" id="cardsGrid"></div>
+    </div>
+
+    <!-- MODAL -->
+    <div class="overlay" id="leaveOverlay">
+      <div class="modal">
+        <div class="modal-head">
+          <div>
+            <h3 id="modalTitle">Apply for Leave</h3>
+            <p id="modalSub">Fill details and authenticate</p>
+          </div>
+          <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+        </div>
+        <div class="modal-body" id="modalBody">
+          <div id="formSection">
+            <!-- Single Date Picker (replaces from/to) -->
+            <div class="form-row">
+              <label class="form-label">Select Date</label>
+              <input type="date" class="form-input" id="leaveDate">
+            </div>
+
+            <!-- Work From Home Radio -->
+            <div class="form-row">
+              <label class="form-label">Work From Home</label>
+              <div class="radio-group">
+                <label class="radio-option" id="wfhYesLabel">
+                  <input type="radio" name="wfh" id="wfhYes" value="Yes">
+                  <span>Yes</span>
+                </label>
+                <label class="radio-option selected" id="wfhNoLabel">
+                  <input type="radio" name="wfh" id="wfhNo" value="No" checked>
+                  <span>No</span>
+                </label>
+              </div>
+              <span class="wfh-note">⚠️ Work From Home days are not counted as leave.</span>
+            </div>
+
+            <div class="form-row">
+              <label class="form-label">Reason</label>
+              <textarea class="reason-input" id="leaveReason" rows="2" placeholder="Brief reason for leave..."></textarea>
+            </div>
+            <div class="form-row">
+              <label class="form-label">Enter 4-Digit PIN</label>
+              <div class="pin-wrap">
+                <input class="pin-input" type="password" maxlength="1" id="p1" oninput="pinNav(this,'','p2')">
+                <input class="pin-input" type="password" maxlength="1" id="p2" oninput="pinNav(this,'p1','p3')">
+                <input class="pin-input" type="password" maxlength="1" id="p3" oninput="pinNav(this,'p2','p4')">
+                <input class="pin-input" type="password" maxlength="1" id="p4" oninput="pinNav(this,'p3','')">
+              </div>
+              <div class="pin-note">Enter your personal 4-digit PIN to authenticate</div>
+              <div class="pin-error" id="pinError">&#10060; Incorrect PIN. Please try again.</div>
+            </div>
+            <button class="btn-submit" id="submitBtn" onclick="submitLeave()">Submit Leave Request</button>
+          </div>
+          <div id="successSection" style="display:none">
+            <div class="success-msg">
+              <div class="success-icon">&#x2705;</div>
+              <h4>Leave Submitted!</h4>
+              <p id="successText">Your leave has been recorded successfully.</p>
+              <button class="success-close" onclick="closeModal()">Done</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DRAWER -->
+    <div class="drawer-overlay" id="drawerOverlay">
+      <div class="drawer" id="drawer">
+        <div class="drawer-head">
+          <h3>Leave History</h3>
+          <button class="drawer-close" onclick="closeDrawer()">&#x2715;</button>
+        </div>
+        <div id="drawerContent"></div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+      const SHEET_URL = "https://script.google.com/macros/s/AKfycbxQ5Yj9_I2X1JcLU2LiZYg0s2BVy2qoVp9AsIDLKQvJwGb13pEOBIgDnxlSAYgjc_SK/exec";
+      // const SHEET_URL = "https://script.google.com/macros/s/AKfycbyNPp0KwnPD9GdFsVYofIlnrUkM6J3pxwFKbdo9_cfJr33k17ZjNMqEjAn1ib2ZvYDT5A/exec";
+
+      const MEMBERS = [
+        {id:"M001",pin:"1234",name:"Asker Joshua",role:"Project Manager",color:"#2563eb",bg:"#dbeafe"},
+        {id:"M002",pin:"2345",name:"Alok",role:"Lead Software Engineer",color:"#7c3aed",bg:"#ede9fe"},
+        {id:"M003",pin:"3456",name:"Nanda Kumar G",role:"Lead Engineer",color:"#0891b2",bg:"#cffafe"},
+        {id:"M004",pin:"4567",name:"Sampath Kumar",role:"Lead Engineer",color:"#059669",bg:"#d1fae5"},
+        {id:"M005",pin:"5678",name:"Ashwin Kumar",role:"Lead Engineerr",color:"#d97706",bg:"#fef3c7"},
+        {id:"M006",pin:"6789",name:"Premnath",role:"Lead Engineer",color:"#dc2626",bg:"#fee2e2"},
+        {id:"M007",pin:"7890",name:"James Saloman",role:"Graduate Engineer",color:"#7c3aed",bg:"#ede9fe"},
+        {id:"M008",pin:"8901",name:"Dharshini",role:"Graduate Engineer",color:"#0891b2",bg:"#cffafe"},
+        {id:"M009",pin:"9012",name:"Nandha Kumar B",role:"Graduate Engineer",color:"#059669",bg:"#d1fae5"},
+        {id:"M010",pin:"0123",name:"Praveen Kumar",role:"Graduate Engineer",color:"#2563eb",bg:"#dbeafe"},
+        {id:"M011",pin:"1357",name:"Anish Kumar",role:"Graduate Engineer",color:"#d97706",bg:"#fef3c7"},
+        {id:"M012",pin:"2004",name:"Bala Murugan M ",role:"Internship",color:"#dc2626",bg:"#fee2e2"},
+        {id:"M013",pin:"2004",name:"Prem Kumar",role:" Internship",color:"#7c3aed",bg:"#ede9fe"},
+        
+      ];
+
+      let leaveData = {};
+      let currentMemberId = null;
+
+      document.addEventListener("DOMContentLoaded", function() {
+        // WFH radio highlight toggle
+        document.querySelectorAll('input[name="wfh"]').forEach(radio => {
+          radio.addEventListener('change', function() {
+            document.getElementById('wfhYesLabel').classList.toggle('selected', this.value === 'Yes');
+            document.getElementById('wfhNoLabel').classList.toggle('selected', this.value === 'No');
+          });
+        });
+
+        // Close modal on Escape
+        document.addEventListener("keydown", function(e) {
+          if (e.key === "Escape") closeModal();
+        });
+
+        // Close modal on backdrop click
+        document.getElementById("leaveOverlay").addEventListener("click", function(e) {
+          if (e.target === this) closeModal();
+        });
+
+        init();
+      });
+
+      function init() {
+        MEMBERS.forEach(m => leaveData[m.id] = []);
+        showSkeletons();
+        buildNav();
+        loadSheetData();
+      }
+
+      function showSkeletons() {
+        const grid = document.getElementById("cardsGrid");
+        grid.innerHTML = MEMBERS.map(() => `
+          <div class="skeleton-card">
+            <div class="sk sk-circle"></div>
+            <div class="sk sk-line"></div>
+            <div class="sk sk-line-sm"></div>
+            <div class="sk sk-line-sm"></div>
+            <div class="sk sk-line"></div>
+            <div class="sk sk-btn"></div>
+          </div>
+        `).join("");
+      }
+
+      function buildNav() {
+        const nav = document.getElementById("navBar");
+        nav.innerHTML = `<div class="nav-item active" onclick="showAll(this)">All Members <span class="nav-badge">${MEMBERS.length}</span></div>`;
+        MEMBERS.forEach(m => {
+          const navItem = document.createElement("div");
+          navItem.className = "nav-item";
+          navItem.dataset.memberId = m.id;
+          navItem.innerHTML = `${m.name.split(" ")[0]} <span class="nav-badge nav-count-${m.id}">0</span>`;
+          navItem.onclick = () => openDrawer(m.id);
+          nav.appendChild(navItem);
+        });
+      }
+
+      async function loadSheetData() {
+        try {
+          const res = await fetch(SHEET_URL);
+          const json = await res.json();
+
+          MEMBERS.forEach(m => leaveData[m.id] = []);
+
+          if (json.status === "success") {
+            json.data.forEach(row => {
+              if (leaveData[row.id]) {
+                leaveData[row.id].push({
+                  from: row.from_leave,
+                  to: row.end_leave,
+                  reason: row.reason,
+                  wfh: row.wfh || "No"
+                });
+              }
+            });
+          }
+
+          buildCards();
+          updateNavCounts();
+
+        } catch (err) {
+          console.error("Error loading data:", err);
+          buildCards();
+        }
+      }
+
+      // Count only non-WFH entries as leave days
+      function getActualLeaveDays(leaves) {
+        return leaves
+          .filter(l => (l.wfh || "No") !== "Yes")
+          .reduce((a, l) => a + getDays(l.from, l.to), 0);
+      }
+
+      function buildCards() {
+        const grid = document.getElementById("cardsGrid");
+        grid.innerHTML = "";
+
+        MEMBERS.forEach(m => {
+          const leaves = leaveData[m.id];
+          const total = getActualLeaveDays(leaves);
+
+          const card = document.createElement("div");
+          card.className = "member-card" + (leaves.length > 0 ? " has-leaves" : "");
+          card.dataset.name = m.name.toLowerCase();
+          card.dataset.role = m.role.toLowerCase();
+          card.dataset.id = m.id.toLowerCase();
+
+          card.innerHTML = `
+            <div class="avatar" style="background:${m.bg};color:${m.color}">
+              ${getInitials(m.name)}
+              <div class="leave-dot"></div>
+            </div>
+            <div class="member-name">${m.name}</div>
+            <div class="member-role">${m.role}</div>
+            <div class="member-id">${m.id}</div>
+            <div class="leave-count">Leaves taken: <span>${total}</span> days</div>
+            <button class="btn-leave" onclick="openModal('${m.id}')">Apply Leave</button>
+          `;
+          grid.appendChild(card);
+        });
+
+        const q = document.getElementById("searchInput").value;
+        if (q) filterMembers(q);
+      }
+
+      function updateNavCounts() {
+        MEMBERS.forEach(m => {
+          const total = getActualLeaveDays(leaveData[m.id]);
+          const badge = document.querySelector(`.nav-count-${m.id}`);
+          if (badge) badge.textContent = total;
+        });
+      }
+
+      function filterMembers(query) {
+        const q = query.toLowerCase().trim();
+        document.querySelectorAll(".member-card").forEach(card => {
+          const match = card.dataset.name.includes(q) ||
+                        card.dataset.role.includes(q) ||
+                        card.dataset.id.includes(q);
+          card.classList.toggle("hidden", !match);
+        });
+      }
+
+      // Check overlap using single date (from === to)
+      function isOverlapping(date, existingLeaves) {
+        const d = new Date(date);
+        return existingLeaves.some(l => {
+          const oldStart = new Date(l.from);
+          const oldEnd = new Date(l.to);
+          return (d >= oldStart && d <= oldEnd);
+        });
+      }
+
+      function getWFHValue() {
+        return document.querySelector('input[name="wfh"]:checked').value;
+      }
+
+      function submitLeave() {
+        const date = document.getElementById("leaveDate").value;
+        const reason = document.getElementById("leaveReason").value;
+        const wfh = getWFHValue();
+        const pin = getPin();
+
+        if (!date) { showToast("Please select a date", "error"); return; }
+
+        const leaves = leaveData[currentMemberId] || [];
+        if (isOverlapping(date, leaves)) { showToast("A record already exists for this date ❌", "error"); return; }
+
+        const m = MEMBERS.find(x => x.id === currentMemberId);
+        if (pin !== m.pin) { document.getElementById("pinError").style.display = "block"; return; }
+
+        const btn = document.getElementById("submitBtn");
+        btn.disabled = true;
+        btn.textContent = "Submitting...";
+
+        const payload = {
+          name: m.name,
+          id: m.id,
+          from_leave: date,
+          end_leave: date,
+          reason: reason,
+          wfh: wfh
+        };
+
+        fetch(SHEET_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        })
+        .then(() => {
+          document.getElementById("formSection").style.display = "none";
+          document.getElementById("successSection").style.display = "block";
+
+          const label = wfh === "Yes"
+            ? `Work From Home on ${formatDate(date)} recorded (not counted as leave).`
+            : `1 day leave on ${formatDate(date)} recorded.`;
+
+          document.getElementById("successText").textContent = label;
+          loadSheetData();
+        })
+        .catch(() => {
+          showToast("Submission failed ❌", "error");
+          btn.disabled = false;
+          btn.textContent = "Submit Leave Request";
+        });
+      }
+
+      // HELPERS
+      function getDays(f, t) { return (new Date(t) - new Date(f)) / (1000 * 60 * 60 * 24) + 1; }
+      function getInitials(name) { return name.split(" ").map(n => n[0]).join("").toUpperCase(); }
+      function getPin() { return ["p1","p2","p3","p4"].map(id => document.getElementById(id).value).join(""); }
+
+      function formatDate(dateStr) {
+        return new Date(dateStr).toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" });
+      }
+
+      function pinNav(el, prevId, nextId) {
+        if (el.value && nextId) document.getElementById(nextId).focus();
+        if (!el.value && prevId) document.getElementById(prevId).focus();
+      }
+
+      // MODAL
+      function openModal(id) {
+        currentMemberId = id;
+        const m = MEMBERS.find(x => x.id === id);
+        document.getElementById("modalTitle").textContent = `Apply Leave – ${m.name}`;
+        document.getElementById("leaveOverlay").classList.add("show");
+      }
+
+      function closeModal() {
+        resetForm();
+        document.getElementById("leaveOverlay").classList.remove("show");
+        document.getElementById("formSection").style.display = "block";
+        document.getElementById("successSection").style.display = "none";
+        const btn = document.getElementById("submitBtn");
+        btn.disabled = false;
+        btn.textContent = "Submit Leave Request";
+        currentMemberId = null;
+      }
+
+      function resetForm() {
+        document.getElementById("leaveDate").value = "";
+        document.getElementById("leaveReason").value = "";
+        ["p1","p2","p3","p4"].forEach(id => document.getElementById(id).value = "");
+        document.getElementById("pinError").style.display = "none";
+        // Reset WFH to "No"
+        document.getElementById("wfhNo").checked = true;
+        document.getElementById("wfhYesLabel").classList.remove("selected");
+        document.getElementById("wfhNoLabel").classList.add("selected");
+      }
+
+      // DRAWER
+      function openDrawer(id) {
+        const m = MEMBERS.find(x => x.id === id);
+        const leaves = [...leaveData[id]].reverse();
+        const total = getActualLeaveDays(leaveData[id]);
+
+        let html = `
+          <div class="drawer-member-info">
+            <div class="drawer-avatar" style="background:${m.bg};color:${m.color}">${getInitials(m.name)}</div>
+            <div>
+              <div class="drawer-name">${m.name}</div>
+              <div class="drawer-role">${m.role} – Total: ${total} days leave</div>
+            </div>
+          </div>
+        `;
+
+        if (leaves.length === 0) {
+          html += `<div class="no-leaves">No leave records</div>`;
+        } else {
+          html += `<div class="leave-list">`;
+          leaves.forEach(l => {
+            const isWFH = (l.wfh || "No") === "Yes";
+            const daysLabel = isWFH
+              ? `<div class="leave-days" style="background:#dcfce7;color:#15803d">WFH</div>`
+              : `<div class="leave-days">${getDays(l.from, l.to)} day(s)</div>`;
+
+            html += `
+              <div class="leave-row">
+                <div class="leave-row-top">
+                  <div class="leave-dates">${formatDate(l.from)}</div>
+                  ${daysLabel}
+                </div>
+                <div class="leave-reason-text">${l.reason || "No reason provided"}</div>
+                <span class="wfh-badge ${isWFH ? 'wfh-yes' : 'wfh-no'}">
+                  ${isWFH ? '🏠 Work From Home' : '🏢 Leave'}
+                </span>
+              </div>
+            `;
+          });
+          html += `</div>`;
+        }
+
+        document.getElementById("drawerContent").innerHTML = html;
+        document.getElementById("drawerOverlay").classList.add("show");
+      }
+
+      function closeDrawer() { document.getElementById("drawerOverlay").classList.remove("show"); }
+
+      function showAll(el) {
+        document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+        if (el) el.classList.add("active");
+        document.getElementById("searchInput").value = "";
+        document.querySelectorAll(".member-card").forEach(c => c.classList.remove("hidden"));
+      }
+
+      function showToast(msg, type = "") {
+        const t = document.getElementById("toast");
+        t.textContent = msg;
+        t.className = "toast show" + (type === "error" ? " error" : "");
+        setTimeout(() => t.className = "toast", 3000);
+      }
+
+      setInterval(loadSheetData, 30000);
+    </script>
+  </body>
+</html>
