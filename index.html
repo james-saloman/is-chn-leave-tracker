@@ -457,14 +457,14 @@
 
         const payload = {
           name: m.name,
-          member_id: m.id,
-          from_date: date,
-          to_date: date,
+          id: m.id,
+          from_leave: date,
+          end_leave: date,
           reason: reason,
-          work_from_home: wfh === "Yes" ? "Yes" : "No"
+          wfh: wfh === "Yes" ? "Yes" : "No"
         };
 
-        fetch(`${API_URL}/leaves`, {
+        fetch(API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
