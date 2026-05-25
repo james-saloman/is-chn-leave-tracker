@@ -251,11 +251,12 @@
     <div class="toast" id="toast"></div>
 
     <script>
-      const SHEET_URL = "https://script.google.com/macros/s/AKfycbxQ5Yj9_I2X1JcLU2LiZYg0s2BVy2qoVp9AsIDLKQvJwGb13pEOBIgDnxlSAYgjc_SK/exec";
-      // const SHEET_URL = "https://script.google.com/macros/s/AKfycbyNPp0KwnPD9GdFsVYofIlnrUkM6J3pxwFKbdo9_cfJr33k17ZjNMqEjAn1ib2ZvYDT5A/exec";
+      // Update this to your Render backend URL when deployed
+      const API_URL = "http://localhost:3000/api";
+      // For production, use: const API_URL = "https://your-app.render.com/api";
 
       const MEMBERS = [
-        {id:"M001",pin:"1234",name:"Asker Joshua",role:"Project Manager",color:"#2563eb",bg:"#dbeafe"},
+        {id:"M001",pin:"1234",name:"Asher Joshua",role:"Project Manager",color:"#2563eb",bg:"#dbeafe"},
         {id:"M002",pin:"2345",name:"Alok",role:"Lead Software Engineer",color:"#7c3aed",bg:"#ede9fe"},
         {id:"M003",pin:"3456",name:"Nanda Kumar G",role:"Lead Engineer",color:"#0891b2",bg:"#cffafe"},
         {id:"M004",pin:"4567",name:"Sampath Kumar",role:"Lead Engineer",color:"#059669",bg:"#d1fae5"},
@@ -332,23 +333,21 @@
 
       async function loadSheetData() {
         try {
-          const res = await fetch(SHEET_URL);
-          const json = await res.json();
+          const res = await fetch(`${API_URL}/leaves`);
+          const leaves = await res.json();
 
           MEMBERS.forEach(m => leaveData[m.id] = []);
 
-          if (json.status === "success") {
-            json.data.forEach(row => {
-              if (leaveData[row.id]) {
-                leaveData[row.id].push({
-                  from: row.from_leave,
-                  to: row.end_leave,
-                  reason: row.reason,
-                  wfh: row.wfh || "No"
-                });
-              }
-            });
-          }
+          leaves.forEach(row => {
+            if (leaveData[row.member_id]) {
+              leaveData[row.member_id].push({
+                from: row.from_date,
+                to: row.to_date,
+                reason: row.reason,
+                wfh: row.work_from_home || "No"
+              });
+            }
+          });
 
           buildCards();
           updateNavCounts();
@@ -457,13 +456,13 @@
           wfh: wfh
         };
 
-        fetch(SHEET_URL, {
+        fetch(`${API_URL}/leaves`, {
           method: "POST",
-          mode: "no-cors",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         })
-        .then(() => {
+        .then(res => {
+          if (!res.ok) throw new Error("Submission failed");
           document.getElementById("formSection").style.display = "none";
           document.getElementById("successSection").style.display = "block";
 
@@ -474,7 +473,8 @@
           document.getElementById("successText").textContent = label;
           loadSheetData();
         })
-        .catch(() => {
+        .catch(err => {
+          console.error(err);
           showToast("Submission failed ❌", "error");
           btn.disabled = false;
           btn.textContent = "Submit Leave Request";
