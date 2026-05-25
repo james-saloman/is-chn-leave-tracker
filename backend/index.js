@@ -119,7 +119,8 @@ app.get('/api/leaves', async (req, res) => {
     const leaves = await readExcelSheet();
     res.json(leaves);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('GET /api/leaves error:', error.response?.status, error.response?.data || error.message);
+    res.status(500).json({ error: error.message, details: error.response?.data });
   }
 });
 
@@ -134,7 +135,8 @@ app.post('/api/leaves', async (req, res) => {
     await appendToExcelSheet({ name, id, from_leave, end_leave, reason, wfh });
     res.json({ status: 'ok' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('POST /api/leaves error:', error.response?.status, error.response?.data || error.message);
+    res.status(500).json({ error: error.message, details: error.response?.data });
   }
 });
 
