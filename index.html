@@ -252,7 +252,7 @@
 
     <script>
       // Google Apps Script deployment URL
-      const API_URL = "https://script.google.com/macros/s/AKfycbxQ5Yj9_I2X1JcLU2LiZYg0s2BVy2qoVp9AsIDLKQvJwGb13pEOBIgDnxlSAYgjc_SK/exec";
+      const API_URL = "https://script.google.com/macros/s/AKfycbwl94IqRfHKvQPzet8nS07AU3UpUBaSg_BlTekef_Ub1qWpPTrVJoNNuBK-rxBXIB9n/exec";
 
       const MEMBERS = [
         {id:"M001",pin:"1234",name:"Asher Joshua",role:"Project Manager",color:"#2563eb",bg:"#dbeafe"},
@@ -331,36 +331,40 @@
       }
 
       async function loadSheetData() {
-        try {
-          const res = await fetch(`${API_URL}/leaves`);
-          if (!res.ok) {
-            throw new Error(`API error: ${res.status}`);
-          }
-          const leaves = await res.json();
+      try {
+        // ✅ Fix 1: Remove "/leaves" 
+        // ✅ Fix 2: Add redirect: 'follow'
+        const res = await fetch(API_URL, {
+          redirect: 'follow'
+        });
 
-          MEMBERS.forEach(m => leaveData[m.id] = []);
+        if (!res.ok) {
+          throw new Error(`API error: ${res.status}`);
+        }
 
-          if (Array.isArray(leaves)) {
-            leaves.forEach(row => {
-              if (leaveData[row.member_id]) {
-                leaveData[row.member_id].push({
-                  from: row.from_date,
-                  to: row.to_date,
-                  reason: row.reason,
-                  wfh: row.work_from_home || "No"
-                });
-              }
+        const response = await res.json();
+
+        // ✅ Fix 3: Your doGet() returns { status: "success", data: [...] }
+        //           So you need response.data, not response directly
+        const leaves = response.data;
+
+        MEMBERS.forEach(m => leaveData[m.id] = []);
+
+        if (Array.isArray(leaves)) {
+          leaves.forEach(row => {
+          if (leaveData[row.id]) {                
+              leaveData[row.id].push({
+              from: row.from_leave,                
+              to:   row.end_leave,                 
+              wfh: row.wfh || "No"     
             });
           }
-
-          buildCards();
-          updateNavCounts();
-
-        } catch (err) {
-          console.error("Error loading data:", err);
-          buildCards();
+        });
         }
+      } catch (err) {
+        console.error('Failed to load sheet data:', err);
       }
+    }
 
       // Count only non-WFH entries as leave days
       function getActualLeaveDays(leaves) {
