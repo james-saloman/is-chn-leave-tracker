@@ -35,15 +35,17 @@ async function getAccessToken() {
     console.log('[DEBUG] Requesting new access token...');
     console.log('[DEBUG] TENANT_ID:', TENANT_ID);
     console.log('[DEBUG] CLIENT_ID:', CLIENT_ID);
+    console.log('[DEBUG] CLIENT_SECRET provided:', !!CLIENT_SECRET);
+
+    const params = new URLSearchParams();
+    params.append('client_id', CLIENT_ID);
+    params.append('client_secret', CLIENT_SECRET);
+    params.append('scope', 'https://graph.microsoft.com/.default');
+    params.append('grant_type', 'client_credentials');
 
     const response = await axios.post(
       `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`,
-      {
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        scope: 'https://graph.microsoft.com/.default',
-        grant_type: 'client_credentials'
-      },
+      params,
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
 
