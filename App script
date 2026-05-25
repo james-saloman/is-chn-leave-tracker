@@ -4,24 +4,34 @@ function doPost(e) {
     var data = JSON.parse(e.postData.contents);
 
     sheet.appendRow([
-      sheet.getLastRow(),        // S.No (auto-incremented based on row)
-      data.name,                 // Name
-      data.id,                   // Member ID
-      data.from_leave,           // Date (single date)
-      data.end_leave,            // End Date (same as from_leave for single-day)
-      data.reason,               // Reason
-      data.wfh || "No",           //  NEW: Work From Home (Yes / No)
+      sheet.getLastRow(),
+      data.name,
+      data.id,
+      data.from_leave,
+      data.end_leave,
+      data.reason,
+      data.wfh || "No",
       new Date()
     ]);
 
-    return ContentService
-      .createTextOutput(JSON.stringify({ status: "success" }))
-      .setMimeType(ContentService.MimeType.JSON);
+    var response = {
+      status: "success",
+      data: { message: "Leave request submitted" }
+    };
 
+    return ContentService
+      .createTextOutput(JSON.stringify(response))
+      .setMimeType(ContentService.MimeType.JSON)
+      .addHeader('Access-Control-Allow-Origin', '*')
+      .addHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+      .addHeader('Access-Control-Allow-Headers', 'Content-Type');
   } catch(err) {
     return ContentService
       .createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
+      .setMimeType(ContentService.MimeType.JSON)
+      .addHeader('Access-Control-Allow-Origin', '*')
+      .addHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+      .addHeader('Access-Control-Allow-Headers', 'Content-Type');
   }
 }
 
@@ -33,24 +43,38 @@ function doGet() {
 
     for (var i = 1; i < rows.length; i++) {
       result.push({
-        sno:        rows[i][0],
-        name:       rows[i][1],
-        id:         rows[i][2],
+        sno: rows[i][0],
+        name: rows[i][1],
+        id: rows[i][2],
         from_leave: rows[i][3],
-        end_leave:  rows[i][4],
-        reason:     rows[i][5],
-        wfh:        rows[i][6] || "No",   //  NEW: Read WFH column (col G), default "No"
-        timestamp:  rows[i][7] 
+        end_leave: rows[i][4],
+        reason: rows[i][5],
+        wfh: rows[i][6] || "No",
+        timestamp: rows[i][7]
       });
     }
 
     return ContentService
       .createTextOutput(JSON.stringify({ status: "success", data: result }))
-      .setMimeType(ContentService.MimeType.JSON);
-
+      .setMimeType(ContentService.MimeType.JSON)
+      .addHeader('Access-Control-Allow-Origin', '*')
+      .addHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+      .addHeader('Access-Control-Allow-Headers', 'Content-Type');
   } catch(err) {
     return ContentService
       .createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
+      .setMimeType(ContentService.MimeType.JSON)
+      .addHeader('Access-Control-Allow-Origin', '*')
+      .addHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+      .addHeader('Access-Control-Allow-Headers', 'Content-Type');
   }
+}
+
+function doOptions(e) {
+  return ContentService
+    .createTextOutput()
+    .setMimeType(ContentService.MimeType.TEXT)
+    .addHeader('Access-Control-Allow-Origin', '*')
+    .addHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    .addHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
