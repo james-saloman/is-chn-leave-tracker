@@ -1,0 +1,56 @@
+function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+
+    sheet.appendRow([
+      sheet.getLastRow(),        // S.No (auto-incremented based on row)
+      data.name,                 // Name
+      data.id,                   // Member ID
+      data.from_leave,           // Date (single date)
+      data.end_leave,            // End Date (same as from_leave for single-day)
+      data.reason,               // Reason
+      data.wfh || "No",           //  NEW: Work From Home (Yes / No)
+      new Date()
+    ]);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: "success" }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch(err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet() {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var rows = sheet.getDataRange().getValues();
+    var result = [];
+
+    for (var i = 1; i < rows.length; i++) {
+      result.push({
+        sno:        rows[i][0],
+        name:       rows[i][1],
+        id:         rows[i][2],
+        from_leave: rows[i][3],
+        end_leave:  rows[i][4],
+        reason:     rows[i][5],
+        wfh:        rows[i][6] || "No",   //  NEW: Read WFH column (col G), default "No"
+        timestamp:  rows[i][7] 
+      });
+    }
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: "success", data: result }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch(err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
