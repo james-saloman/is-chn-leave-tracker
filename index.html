@@ -453,7 +453,7 @@
           from_leave: date,
           end_leave: date,
           reason: reason,
-          wfh: wfh
+          wfh: wfh === "Yes"
         };
 
         fetch(`${API_URL}/leaves`, {
@@ -462,7 +462,14 @@
           body: JSON.stringify(payload)
         })
         .then(res => {
-          if (!res.ok) throw new Error("Submission failed");
+          if (!res.ok) {
+            return res.json().then(data => {
+              throw new Error(data.error || "Submission failed");
+            });
+          }
+          return res.json();
+        })
+        .then(() => {
           document.getElementById("formSection").style.display = "none";
           document.getElementById("successSection").style.display = "block";
 
@@ -474,8 +481,8 @@
           loadSheetData();
         })
         .catch(err => {
-          console.error(err);
-          showToast("Submission failed ❌", "error");
+          console.error("Submit error:", err);
+          showToast(err.message || "Submission failed ❌", "error");
           btn.disabled = false;
           btn.textContent = "Submit Leave Request";
         });
