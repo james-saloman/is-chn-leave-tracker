@@ -27,10 +27,15 @@ let tokenExpiry = null;
 
 async function getAccessToken() {
   if (accessToken && tokenExpiry && Date.now() < tokenExpiry) {
+    console.log('[DEBUG] Using cached access token');
     return accessToken;
   }
 
   try {
+    console.log('[DEBUG] Requesting new access token...');
+    console.log('[DEBUG] TENANT_ID:', TENANT_ID);
+    console.log('[DEBUG] CLIENT_ID:', CLIENT_ID);
+
     const response = await axios.post(
       `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`,
       {
@@ -44,10 +49,15 @@ async function getAccessToken() {
 
     accessToken = response.data.access_token;
     tokenExpiry = Date.now() + (response.data.expires_in * 1000) - 60000;
+    console.log('[DEBUG] Access token obtained successfully');
     return accessToken;
   } catch (error) {
-    console.error('Failed to get access token:', error.response?.data || error.message);
-    throw new Error('Authentication failed');
+    console.error('Failed to get access token:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
+    throw new Error('Authentication failed: ' + (error.response?.data?.error_description || error.message));
   }
 }
 
@@ -55,14 +65,19 @@ async function readExcelSheet() {
   const token = await getAccessToken();
 
   try {
+    console.log(`[DEBUG] Reading Excel from site: ${SHAREPOINT_SITE_ID}, item: ${EXCEL_ITEM_ID}`);
     const response = await axios.get(
       `https://graph.microsoft.com/v1.0/sites/${SHAREPOINT_SITE_ID}/drive/items/${EXCEL_ITEM_ID}/workbook/worksheets('Sheet1')/usedRange`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
     const { values } = response.data;
-    if (!values || values.length === 0) return [];
+    if (!values || values.length === 0) {
+      console.log('[DEBUG] No data in Excel sheet, returning empty array');
+      return [];
+    }
 
+    console.log(`[DEBUG] Read ${values.length} rows from Excel`);
     return values.slice(1).map(row => ({
       sNo: row[0],
       name: row[1],
@@ -73,7 +88,11 @@ async function readExcelSheet() {
       work_from_home: row[6]
     }));
   } catch (error) {
-    console.error('Failed to read Excel:', error.response?.data || error.message);
+    console.error('Failed to read Excel:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
     throw error;
   }
 }
