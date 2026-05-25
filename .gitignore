@@ -1,0 +1,11 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Environment variables
+.env
+.env.local
+
+# OS
+.DS_Store
+*.log
