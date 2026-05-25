@@ -13,64 +13,27 @@ app.use(cors({
 }));
 
 const {
-  TENANT_ID,
-  CLIENT_ID,
-  CLIENT_SECRET,
   SHAREPOINT_SITE_ID,
   EXCEL_ITEM_ID,
+  SERVICE_ACCOUNT_EMAIL,
+  SERVICE_ACCOUNT_PASSWORD,
   NODE_ENV = 'development',
   PORT = 3000
 } = process.env;
 
-let accessToken = null;
-let tokenExpiry = null;
-
-async function getAccessToken() {
-  if (accessToken && tokenExpiry && Date.now() < tokenExpiry) {
-    console.log('[DEBUG] Using cached access token');
-    return accessToken;
-  }
-
-  try {
-    console.log('[DEBUG] Requesting new access token...');
-    console.log('[DEBUG] TENANT_ID:', TENANT_ID);
-    console.log('[DEBUG] CLIENT_ID:', CLIENT_ID);
-    console.log('[DEBUG] CLIENT_SECRET provided:', !!CLIENT_SECRET);
-
-    const params = new URLSearchParams();
-    params.append('client_id', CLIENT_ID);
-    params.append('client_secret', CLIENT_SECRET);
-    params.append('scope', 'https://graph.microsoft.com/.default');
-    params.append('grant_type', 'client_credentials');
-
-    const response = await axios.post(
-      `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`,
-      params,
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-    );
-
-    accessToken = response.data.access_token;
-    tokenExpiry = Date.now() + (response.data.expires_in * 1000) - 60000;
-    console.log('[DEBUG] Access token obtained successfully');
-    return accessToken;
-  } catch (error) {
-    console.error('Failed to get access token:', {
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message
-    });
-    throw new Error('Authentication failed: ' + (error.response?.data?.error_description || error.message));
-  }
+function getBasicAuthHeader() {
+  const credentials = Buffer.from(`${SERVICE_ACCOUNT_EMAIL}:${SERVICE_ACCOUNT_PASSWORD}`).toString('base64');
+  return `Basic ${credentials}`;
 }
 
 async function readExcelSheet() {
-  const token = await getAccessToken();
-
   try {
     console.log(`[DEBUG] Reading Excel from site: ${SHAREPOINT_SITE_ID}, item: ${EXCEL_ITEM_ID}`);
+    const url = `https://graph.microsoft.com/v1.0/sites/${SHAREPOINT_SITE_ID}/drive/items/${EXCEL_ITEM_ID}/workbook/worksheets('Sheet1')/usedRange`;
+    console.log(`[DEBUG] API URL: ${url}`);
     const response = await axios.get(
-      `https://graph.microsoft.com/v1.0/sites/${SHAREPOINT_SITE_ID}/drive/items/${EXCEL_ITEM_ID}/workbook/worksheets('Sheet1')/usedRange`,
-      { headers: { Authorization: `Bearer ${token}` } }
+      url,
+      { headers: { Authorization: getBasicAuthHeader() } }
     );
 
     const { values } = response.data;
@@ -100,8 +63,6 @@ async function readExcelSheet() {
 }
 
 async function appendToExcelSheet(data) {
-  const token = await getAccessToken();
-
   try {
     const rows = await readExcelSheet();
     const nextSNo = rows.length + 1;
@@ -121,7 +82,7 @@ async function appendToExcelSheet(data) {
     await axios.patch(
       `https://graph.microsoft.com/v1.0/sites/${SHAREPOINT_SITE_ID}/drive/items/${EXCEL_ITEM_ID}/workbook/worksheets('Sheet1')/range(address='A${nextSNo + 1}:H${nextSNo + 1}')`,
       { values: [newRow] },
-      { headers: { Authorization: `Bearer ${token}` } }
+      { headers: { Authorization: getBasicAuthHeader() } }
     );
 
     return { status: 'ok' };
