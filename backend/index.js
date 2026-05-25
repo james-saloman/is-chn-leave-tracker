@@ -82,10 +82,10 @@ async function readExcelSheet() {
       sNo: row[0],
       name: row[1],
       member_id: row[2],
-      from_date: row[3],
-      to_date: row[4],
+      from_leave: row[3],
+      end_leave: row[4],
       reason: row[5],
-      work_from_home: row[6]
+      wfh: row[6]
     }));
   } catch (error) {
     console.error('Failed to read Excel:', {

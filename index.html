@@ -334,20 +334,25 @@
       async function loadSheetData() {
         try {
           const res = await fetch(`${API_URL}/leaves`);
+          if (!res.ok) {
+            throw new Error(`API error: ${res.status}`);
+          }
           const leaves = await res.json();
 
           MEMBERS.forEach(m => leaveData[m.id] = []);
 
-          leaves.forEach(row => {
-            if (leaveData[row.member_id]) {
-              leaveData[row.member_id].push({
-                from: row.from_date,
-                to: row.to_date,
-                reason: row.reason,
-                wfh: row.work_from_home || "No"
-              });
-            }
-          });
+          if (Array.isArray(leaves)) {
+            leaves.forEach(row => {
+              if (leaveData[row.member_id]) {
+                leaveData[row.member_id].push({
+                  from: row.from_date,
+                  to: row.to_date,
+                  reason: row.reason,
+                  wfh: row.work_from_home || "No"
+                });
+              }
+            });
+          }
 
           buildCards();
           updateNavCounts();
@@ -449,11 +454,11 @@
 
         const payload = {
           name: m.name,
-          id: m.id,
-          from_leave: date,
-          end_leave: date,
+          member_id: m.id,
+          from_date: date,
+          to_date: date,
           reason: reason,
-          wfh: wfh === "Yes"
+          work_from_home: wfh === "Yes" ? "Yes" : "No"
         };
 
         fetch(`${API_URL}/leaves`, {
