@@ -331,40 +331,33 @@
       }
 
       async function loadSheetData() {
-      try {
-        // ✅ Fix 1: Remove "/leaves" 
-        // ✅ Fix 2: Add redirect: 'follow'
-        const res = await fetch(API_URL, {
-          redirect: 'follow'
-        });
+        try {
+          const res = await fetch(SHEET_URL);
+          const json = await res.json();
 
-        if (!res.ok) {
-          throw new Error(`API error: ${res.status}`);
-        }
+          MEMBERS.forEach(m => leaveData[m.id] = []);
 
-        const response = await res.json();
-
-        // ✅ Fix 3: Your doGet() returns { status: "success", data: [...] }
-        //           So you need response.data, not response directly
-        const leaves = response.data;
-
-        MEMBERS.forEach(m => leaveData[m.id] = []);
-
-        if (Array.isArray(leaves)) {
-          leaves.forEach(row => {
-          if (leaveData[row.id]) {                
-              leaveData[row.id].push({
-              from: row.from_leave,                
-              to:   row.end_leave,                 
-              wfh: row.wfh || "No"     
+          if (json.status === "success") {
+            json.data.forEach(row => {
+              if (leaveData[row.id]) {
+                leaveData[row.id].push({
+                  from: row.from_leave,
+                  to: row.end_leave,
+                  reason: row.reason,
+                  wfh: row.wfh || "No"
+                });
+              }
             });
           }
-        });
+
+          buildCards();
+          updateNavCounts();
+
+        } catch (err) {
+          console.error("Error loading data:", err);
+          buildCards();
         }
-      } catch (err) {
-        console.error('Failed to load sheet data:', err);
       }
-    }
 
       // Count only non-WFH entries as leave days
       function getActualLeaveDays(leaves) {
@@ -464,18 +457,11 @@
           wfh: wfh === "Yes" ? "Yes" : "No"
         };
 
-        fetch(API_URL, {
+        fetch(SHEET_URL, {
           method: "POST",
+          mode: "no-cors",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
-        })
-        .then(res => {
-          if (!res.ok) {
-            return res.json().then(data => {
-              throw new Error(data.error || "Submission failed");
-            });
-          }
-          return res.json();
         })
         .then(() => {
           document.getElementById("formSection").style.display = "none";
@@ -488,9 +474,8 @@
           document.getElementById("successText").textContent = label;
           loadSheetData();
         })
-        .catch(err => {
-          console.error("Submit error:", err);
-          showToast(err.message || "Submission failed ❌", "error");
+        .catch(() => {
+          showToast("Submission failed ❌", "error");
           btn.disabled = false;
           btn.textContent = "Submit Leave Request";
         });
