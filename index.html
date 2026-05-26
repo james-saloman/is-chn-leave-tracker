@@ -21,10 +21,6 @@
       .logo-icon{width:34px;height:34px;background:#2563eb;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display';font-size:18px;color:#fff;font-weight:400}
       .logo-name{font-size:17px;font-weight:600;letter-spacing:.3px}
       .logo-sub{font-size:11px;color:#93c5fd;letter-spacing:.8px;text-transform:uppercase;margin-top:1px}
-      .header-search{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:7px 14px;min-width:220px}
-      .header-search input{background:transparent;border:none;outline:none;color:#fff;font-family:'DM Sans';font-size:14px;width:170px}
-      .header-search input::placeholder{color:#93c5fd}
-      .search-icon{color:#93c5fd;font-size:15px}
       /*logo style*/
       .logo {
         display: flex;
@@ -64,15 +60,67 @@
       .wfh-yes{background:#dcfce7;color:#15803d}
       .wfh-no{background:#fee2e2;color:#dc2626}
 
-      nav{background:#fff;border-bottom:1px solid var(--border);padding:0 2rem;display:flex;gap:0;overflow-x:auto;position:sticky;top:64px;z-index:99}
+      nav{background:#fff;border-bottom:1px solid var(--border);padding:0 2rem;display:flex;gap:0;overflow-x:hidden;position:sticky;top:64px;z-index:99}
       .nav-item{display:flex;align-items:center;gap:6px;padding:0 16px;height:46px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;flex-shrink:0}
       .nav-item:hover{color:var(--accent);border-bottom-color:#bfdbfe}
       .nav-item.active{color:var(--accent);border-bottom-color:var(--accent)}
       .nav-badge{background:var(--accent);color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:20px;min-width:18px;text-align:center}
       .nav-item.zero .nav-badge{background:#e2e8f0;color:var(--muted)}
-      .page-wrap{max-width:1200px;margin:0 auto;padding:2rem 1.5rem}
-      .page-title{font-size:13px;color:var(--muted);margin-bottom:1.5rem;letter-spacing:.3px}
-      .page-title strong{color:var(--text);font-weight:600}
+      .page-wrap{max-width:1200px;margin:0 auto;padding:1.5rem 1.5rem}
+      .page-header{display:flex;align-items:center;gap:2rem;margin-bottom:1.5rem;flex-wrap:wrap}
+
+      /* SUMMARY VIEW */
+      .summary-header{display:flex;gap:1rem;align-items:flex-end;margin-bottom:1.5rem;flex-wrap:wrap}
+      .date-range-group{display:flex;gap:12px;align-items:center}
+      .date-range-group label{font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+      .date-range-group input{padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans';font-size:13px;color:var(--text);outline:none;transition:border .2s}
+      .date-range-group input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.10)}
+      .btn-apply-range{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 20px;font-family:'DM Sans';font-size:13px;font-weight:500;cursor:pointer;transition:background .2s}
+      .btn-apply-range:hover{background:#1d4ed8}
+      .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.5rem;margin-bottom:2rem}
+      .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+      .stat-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:500;margin-bottom:0.5rem}
+      .stat-value{font-size:32px;font-weight:700;color:var(--accent);margin-bottom:1rem}
+      .stat-desc{font-size:12px;color:var(--text)}
+      .summary-table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+      .summary-table thead{background:#f8fafc}
+      .summary-table th{padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border)}
+      .summary-table td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text)}
+      .summary-table tbody tr:hover{background:#f8fafc}
+      .summary-table tbody tr:last-child td{border-bottom:none}
+      .wfh-count{background:#dcfce7;color:#15803d;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;display:inline-block}
+      .leave-count-badge{background:#fef3c7;color:#b45309;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;display:inline-block}
+      .no-data-msg{text-align:center;padding:2rem;color:var(--muted);font-size:14px}
+
+      /* MEMBER FILTER DROPDOWN */
+      .member-filter-wrap{display:flex;align-items:center;gap:12px;flex-shrink:0}
+      .member-filter-label{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+      .member-filter-select{padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans';font-size:13px;color:var(--text);background:var(--card);outline:none;cursor:pointer;transition:border .2s;min-width:180px}
+      .member-filter-select:hover{border-color:var(--accent)}
+      .member-filter-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.10)}
+      /* CALENDAR VIEW */
+      .calendar-wrap{background:#ffffff;border-radius:12px;border:1px solid #f0f0f0;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);height:calc(100vh - 280px);display:flex;flex-direction:column}
+      .calendar-header{background:linear-gradient(135deg, #1a3c5e 0%, #2563eb 100%);color:#fff;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e0e0e0}
+      .calendar-title{font-size:18px;font-weight:700;letter-spacing:-0.5px}
+      .calendar-nav{display:flex;gap:8px}
+      .calendar-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;backdrop-filter:blur(10px)}
+      .calendar-btn:hover{background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.3)}
+      .calendar-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:0;border-bottom:2px solid #f5f5f5;flex-shrink:0}
+      .calendar-weekday{padding:12px 8px;text-align:center;font-size:11px;font-weight:700;color:#666;background:#fafafa;text-transform:uppercase;letter-spacing:.6px}
+      .calendar-days{display:grid;grid-template-columns:repeat(7,1fr);gap:0;background:#fff;flex:1;overflow:hidden}
+      .calendar-day{border:1px solid #f0f0f0;padding:8px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;cursor:pointer;transition:all .2s ease;position:relative;background:#ffffff;overflow:hidden}
+      .calendar-day:hover{background:#f9f9f9;box-shadow:inset 0 0 8px rgba(37,99,235,.08)}
+      .calendar-day.other-month{background:#f5f5f5;color:#999}
+      .calendar-day.today{background:#f0f7ff;border:2px solid #2563eb;border-left-width:3px}
+      .calendar-day.has-leave{background:#fef5f5;color:#1a1a1a}
+      .calendar-day.has-leave .calendar-day-num{color:#1a1a1a;font-weight:700}
+      .calendar-day-num{font-size:12px;font-weight:700;color:#333;margin-bottom:4px}
+      .calendar-other-month .calendar-day-num{color:#ccc}
+      .calendar-badges{display:flex;flex-direction:column;gap:2px;width:100%;overflow:hidden}
+      .calendar-badge{font-size:9px;padding:2px 5px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;display:inline-block;margin-bottom:1px}
+      .calendar-badge.leave{background:#ef4444;color:#fff}
+      .calendar-badge.wfh{background:#fbbf24;color:#78350f}
+
       .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:1rem}
       .member-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1rem 1rem;display:flex;flex-direction:column;align-items:center;text-align:center;transition:box-shadow .2s,transform .2s;position:relative}
       .member-card:hover{box-shadow:0 4px 20px rgba(37,99,235,.10);transform:translateY(-2px)}
@@ -87,6 +135,18 @@
       .leave-count span{font-weight:600;color:var(--accent)}
       .btn-leave{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 0;font-family:'DM Sans';font-size:13px;font-weight:500;cursor:pointer;width:100%;transition:background .2s}
       .btn-leave:hover{background:#1d4ed8}
+      .btn-add-member{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:'DM Sans';font-size:13px;font-weight:500;cursor:pointer;transition:background .2s}
+      .btn-add-member:hover{background:#1d4ed8}
+      .btn-delete-member{position:absolute;top:8px;right:8px;background:#dc2626;color:#fff;border:none;border-radius:6px;padding:4px 8px;font-size:12px;font-weight:500;cursor:pointer;opacity:0;transition:opacity .2s}
+      .member-card:hover .btn-delete-member{opacity:1}
+      .btn-delete-member:hover{background:#b91c1c}
+      .color-picker{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+      .color-option{width:32px;height:32px;border-radius:8px;cursor:pointer;border:2px solid transparent;transition:all .2s}
+      .color-option.selected{border-color:#1e293b;box-shadow:0 0 0 2px #fff}
+      .member-form-row{margin-bottom:1rem}
+      .member-form-label{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.5px}
+      .member-form-input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans';font-size:14px;color:var(--text);outline:none;transition:border .2s}
+      .member-form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.10)}
 
       /* SKELETON LOADING */
       .skeleton-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1rem 1rem;display:flex;flex-direction:column;align-items:center;gap:.6rem}
@@ -154,24 +214,150 @@
     <header>
       <div class="logo">
         <div class="logo-icon">
-          <img src="image/logo.png" alt="Company Logo">
+          <img src="image/logo.jpg" alt="Company Logo">
         </div>
         <div>
           <div class="logo-name">DESIGN GROUP </div>
-          <div class="logo-sub">CSI-IS Team - Leave Tracker</div>
+          <div class="logo-sub">IS-CHN - Leave Tracker</div>
         </div>
       </div>
-      <div class="header-search">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" placeholder="Search member..." oninput="filterMembers(this.value)">
-      </div>
+      <button class="btn-add-member" onclick="openAddMemberModal()">+ Add Member</button>
     </header>
     <nav id="navBar">
-      <div class="nav-item active" onclick="showAll(this)">All Members <span class="nav-badge" id="navAll">15</span></div>
+      <div class="nav-item active" onclick="switchView('overview', this)">Overview</div>
+      <div class="nav-item" onclick="switchView('calendar', this)">Calendar</div>
+      <div class="nav-item" onclick="switchView('summary', this)">Summary</div>
     </nav>
     <div class="page-wrap">
-      <p class="page-title">Dashboard &rsaquo; <strong>Team Leave Overview</strong></p>
-      <div class="cards-grid" id="cardsGrid"></div>
+      <div class="page-header">
+        <div class="member-filter-wrap" id="memberFilterContainer">
+          <label class="member-filter-label">Filter by Member:</label>
+          <select id="memberFilterSelect" class="member-filter-select" onchange="onMemberFilterChange(this)">
+            <option value="all">All Members</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- OVERVIEW VIEW -->
+      <div id="overviewView">
+        <div class="overview-header">
+          <h2 style="font-size:24px;font-weight:700;margin-bottom:0.5rem">Team Leave Overview</h2>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:1.5rem">Real-time dashboard of team leave and WFH patterns</p>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total Team Members</div>
+            <div class="stat-value" id="overviewTotalMembers">0</div>
+            <div class="stat-desc">Active team members</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Members on Leave</div>
+            <div class="stat-value" id="overviewMembersOnLeave">0</div>
+            <div class="stat-desc">Currently absent today</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Members WFH Today</div>
+            <div class="stat-value" id="overviewMembersWFH">0</div>
+            <div class="stat-desc">Working from home</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:1.5rem;margin-bottom:2rem">
+          <div class="stat-card">
+            <h3 style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:1rem">Today's Status</h3>
+            <div id="overviewTodayStatus" style="display:flex;flex-direction:column;gap:10px">
+              <div style="padding:12px;background:#f8fafc;border-radius:8px;border-left:3px solid var(--accent);font-size:13px;color:var(--text)">
+                No absences today
+              </div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <h3 style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:1rem">Team Utilization</h3>
+            <div id="overviewTeamUtilization" style="display:flex;flex-direction:column;gap:8px"></div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <h3 style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:1rem">Team Members</h3>
+          <div id="overviewMemberCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem"></div>
+        </div>
+      </div>
+
+      <!-- CALENDAR VIEW -->
+      <div id="calendarView" style="display:none">
+      <div class="calendar-wrap">
+        <div class="calendar-header">
+          <div class="calendar-title" id="calendarTitle">May 2026</div>
+          <div class="calendar-nav">
+            <button class="calendar-btn" onclick="previousMonth()">← Prev</button>
+            <button class="calendar-btn" onclick="currentMonth()">Today</button>
+            <button class="calendar-btn" onclick="nextMonth()">Next →</button>
+          </div>
+        </div>
+        <div class="calendar-weekdays">
+          <div class="calendar-weekday">Sun</div>
+          <div class="calendar-weekday">Mon</div>
+          <div class="calendar-weekday">Tue</div>
+          <div class="calendar-weekday">Wed</div>
+          <div class="calendar-weekday">Thu</div>
+          <div class="calendar-weekday">Fri</div>
+          <div class="calendar-weekday">Sat</div>
+        </div>
+        <div class="calendar-days" id="calendarDays"></div>
+      </div>
+      </div>
+
+      <!-- SUMMARY VIEW -->
+      <div id="summaryView" style="display:none;">
+        <div class="summary-header">
+          <div class="date-range-group">
+            <div>
+              <label for="summaryStartDate">From Date</label>
+              <input type="date" id="summaryStartDate">
+            </div>
+            <div>
+              <label for="summaryEndDate">To Date</label>
+              <input type="date" id="summaryEndDate">
+            </div>
+            <button class="btn-apply-range" onclick="updateSummary()">Apply</button>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total Leave Days</div>
+            <div class="stat-value" id="totalLeaveDays">0</div>
+            <div class="stat-desc">Across all team members</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total WFH Days</div>
+            <div class="stat-value" id="totalWFHDays">0</div>
+            <div class="stat-desc">Work from home records</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Team Members</div>
+            <div class="stat-value" id="totalMembers">0</div>
+            <div class="stat-desc">With absences in period</div>
+          </div>
+        </div>
+
+        <table class="summary-table">
+          <thead>
+            <tr>
+              <th>Member Name</th>
+              <th>Member ID</th>
+              <th>Leave Days</th>
+              <th>WFH Days</th>
+              <th>Total Absences</th>
+            </tr>
+          </thead>
+          <tbody id="summaryTableBody">
+            <tr><td colspan="5" class="no-data-msg">Select a date range and click Apply to view summary</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- MODAL -->
@@ -248,33 +434,70 @@
       </div>
     </div>
 
+    <!-- ADD MEMBER MODAL -->
+    <div class="overlay" id="addMemberOverlay">
+      <div class="modal">
+        <div class="modal-head">
+          <div>
+            <h3 id="memberModalTitle">Add New Member</h3>
+            <p>Create a new team member profile</p>
+          </div>
+          <button class="modal-close" onclick="closeAddMemberModal()">&#x2715;</button>
+        </div>
+        <div class="modal-body">
+          <div class="member-form-row">
+            <label class="member-form-label">Member Name</label>
+            <input type="text" class="member-form-input" id="memberName" placeholder="Full name">
+          </div>
+          <div class="member-form-row">
+            <label class="member-form-label">Member ID</label>
+            <input type="text" class="member-form-input" id="memberId" placeholder="e.g., M014">
+          </div>
+          <div class="member-form-row">
+            <label class="member-form-label">Role</label>
+            <input type="text" class="member-form-input" id="memberRole" placeholder="e.g., Lead Engineer">
+          </div>
+          <div class="member-form-row">
+            <label class="member-form-label">PIN (4 digits)</label>
+            <input type="text" class="member-form-input" id="memberPin" placeholder="1234" maxlength="4" pattern="[0-9]{4}">
+          </div>
+          <div class="member-form-row">
+            <label class="member-form-label">Avatar Color</label>
+            <div class="color-picker" id="colorPicker"></div>
+          </div>
+          <button class="btn-submit" onclick="saveMember()">Add Member</button>
+        </div>
+      </div>
+    </div>
+
     <div class="toast" id="toast"></div>
 
     <script>
       // Google Apps Script deployment URL
-      const API_URL = "https://script.google.com/macros/s/AKfycbwl94IqRfHKvQPzet8nS07AU3UpUBaSg_BlTekef_Ub1qWpPTrVJoNNuBK-rxBXIB9n/exec";
+      const API_URL = "https://script.google.com/macros/s/AKfycbxgYMKh6QNyntAwirW2kgl99vJlHVByPJAW3zjbcZusIBVAeeXc7HY7Dtm4MFRu7Fn0/exec";
 
-      const MEMBERS = [
-        {id:"M001",pin:"1234",name:"Asher Joshua",role:"Project Manager",color:"#2563eb",bg:"#dbeafe"},
-        {id:"M002",pin:"2345",name:"Alok",role:"Lead Software Engineer",color:"#7c3aed",bg:"#ede9fe"},
-        {id:"M003",pin:"3456",name:"Nanda Kumar G",role:"Lead Engineer",color:"#0891b2",bg:"#cffafe"},
-        {id:"M004",pin:"4567",name:"Sampath Kumar",role:"Lead Engineer",color:"#059669",bg:"#d1fae5"},
-        {id:"M005",pin:"5678",name:"Ashwin Kumar",role:"Lead Engineerr",color:"#d97706",bg:"#fef3c7"},
-        {id:"M006",pin:"6789",name:"Premnath",role:"Lead Engineer",color:"#dc2626",bg:"#fee2e2"},
-        {id:"M007",pin:"7890",name:"James Saloman",role:"Graduate Engineer",color:"#7c3aed",bg:"#ede9fe"},
-        {id:"M008",pin:"8901",name:"Dharshini",role:"Graduate Engineer",color:"#0891b2",bg:"#cffafe"},
-        {id:"M009",pin:"9012",name:"Nandha Kumar B",role:"Graduate Engineer",color:"#059669",bg:"#d1fae5"},
-        {id:"M010",pin:"0123",name:"Praveen Kumar",role:"Graduate Engineer",color:"#2563eb",bg:"#dbeafe"},
-        {id:"M011",pin:"1357",name:"Anish Kumar",role:"Graduate Engineer",color:"#d97706",bg:"#fef3c7"},
-        {id:"M012",pin:"2004",name:"Bala Murugan M ",role:"Internship",color:"#dc2626",bg:"#fee2e2"},
-        {id:"M013",pin:"2004",name:"Prem Kumar",role:" Internship",color:"#7c3aed",bg:"#ede9fe"},
-        
+      const DEFAULT_MEMBERS = [];
+
+      const COLOR_PALETTE = [
+        {bg:"#dbeafe", color:"#2563eb"},
+        {bg:"#ede9fe", color:"#7c3aed"},
+        {bg:"#cffafe", color:"#0891b2"},
+        {bg:"#d1fae5", color:"#059669"},
+        {bg:"#fef3c7", color:"#d97706"},
+        {bg:"#fee2e2", color:"#dc2626"},
+        {bg:"#fce7f3", color:"#be185d"},
+        {bg:"#dbeafe", color:"#0369a1"},
       ];
 
+      let MEMBERS = [];
       let leaveData = {};
       let currentMemberId = null;
+      let selectedColorIndex = 0;
+      let currentCalendarDate = new Date();
+      let activeFilter = "all";
+      let currentView = "calendar";
 
-      document.addEventListener("DOMContentLoaded", function() {
+      document.addEventListener("DOMContentLoaded", async function() {
         // WFH radio highlight toggle
         document.querySelectorAll('input[name="wfh"]').forEach(radio => {
           radio.addEventListener('change', function() {
@@ -283,50 +506,45 @@
           });
         });
 
-        // Close modal on Escape
+        // Close modals on Escape
         document.addEventListener("keydown", function(e) {
-          if (e.key === "Escape") closeModal();
+          if (e.key === "Escape") {
+            closeModal();
+            closeAddMemberModal();
+          }
         });
 
-        // Close modal on backdrop click
+        // Close leave modal on backdrop click
         document.getElementById("leaveOverlay").addEventListener("click", function(e) {
           if (e.target === this) closeModal();
         });
 
+        // Close add member modal on backdrop click
+        document.getElementById("addMemberOverlay").addEventListener("click", function(e) {
+          if (e.target === this) closeAddMemberModal();
+        });
+
+        await loadMembers();
+        initColorPicker();
+        initSummaryDates();
         init();
       });
 
       function init() {
         MEMBERS.forEach(m => leaveData[m.id] = []);
-        showSkeletons();
         buildNav();
         loadSheetData();
-      }
-
-      function showSkeletons() {
-        const grid = document.getElementById("cardsGrid");
-        grid.innerHTML = MEMBERS.map(() => `
-          <div class="skeleton-card">
-            <div class="sk sk-circle"></div>
-            <div class="sk sk-line"></div>
-            <div class="sk sk-line-sm"></div>
-            <div class="sk sk-line-sm"></div>
-            <div class="sk sk-line"></div>
-            <div class="sk sk-btn"></div>
-          </div>
-        `).join("");
+        updateOverview();
       }
 
       function buildNav() {
-        const nav = document.getElementById("navBar");
-        nav.innerHTML = `<div class="nav-item active" onclick="showAll(this)">All Members <span class="nav-badge">${MEMBERS.length}</span></div>`;
+        const select = document.getElementById("memberFilterSelect");
+        select.innerHTML = `<option value="all">All Members</option>`;
         MEMBERS.forEach(m => {
-          const navItem = document.createElement("div");
-          navItem.className = "nav-item";
-          navItem.dataset.memberId = m.id;
-          navItem.innerHTML = `${m.name.split(" ")[0]} <span class="nav-badge nav-count-${m.id}">0</span>`;
-          navItem.onclick = () => openDrawer(m.id);
-          nav.appendChild(navItem);
+          const option = document.createElement("option");
+          option.value = m.id;
+          option.textContent = m.name;
+          select.appendChild(option);
         });
       }
 
@@ -334,28 +552,30 @@
         try {
           const res = await fetch(API_URL);
           const json = await res.json();
+          console.log("Leave data response:", json);
 
           MEMBERS.forEach(m => leaveData[m.id] = []);
 
-          if (json.status === "success") {
+          if (json.status === "success" && json.data) {
             json.data.forEach(row => {
-              if (leaveData[row.id]) {
+              if (row.id && leaveData[row.id]) {
                 leaveData[row.id].push({
                   from: row.from_leave,
                   to: row.end_leave,
-                  reason: row.reason,
-                  wfh: row.wfh || "No"
+                  reason: row.reason || "",
+                  wfh: (row.wfh || "No").toString()
                 });
               }
             });
           }
 
-          buildCards();
-          updateNavCounts();
+          renderCalendar();
+          updateOverview();
 
         } catch (err) {
           console.error("Error loading data:", err);
-          buildCards();
+          renderCalendar();
+          updateOverview();
         }
       }
 
@@ -366,55 +586,300 @@
           .reduce((a, l) => a + getDays(l.from, l.to), 0);
       }
 
-      function buildCards() {
-        const grid = document.getElementById("cardsGrid");
-        grid.innerHTML = "";
+      function updateOverview() {
+        const today = new Date().toISOString().split("T")[0];
+        const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        const monthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
+
+        // Count stats
+        const todayAbsences = getAbsencesForDate(today);
+        const membersOnLeaveToday = todayAbsences.filter(a => a.wfh !== "Yes").length;
+        const membersWFHToday = todayAbsences.filter(a => a.wfh === "Yes").length;
+
+        // Calculate total leave days this month
+        let totalLeaveDaysMonth = 0;
+        MEMBERS.forEach(m => {
+          const leaves = leaveData[m.id] || [];
+          leaves.forEach(l => {
+            const leaveStart = new Date(l.from);
+            const leaveEnd = new Date(l.to);
+            if (leaveEnd >= monthStart && leaveStart <= monthEnd && l.wfh !== "Yes") {
+              const overlapStart = new Date(Math.max(leaveStart.getTime(), monthStart.getTime()));
+              const overlapEnd = new Date(Math.min(leaveEnd.getTime(), monthEnd.getTime()));
+              totalLeaveDaysMonth += getDays(
+                overlapStart.toISOString().split("T")[0],
+                overlapEnd.toISOString().split("T")[0]
+              );
+            }
+          });
+        });
+
+        // Update header stats
+        document.getElementById("overviewTotalMembers").textContent = MEMBERS.length;
+        document.getElementById("overviewMembersOnLeave").textContent = membersOnLeaveToday;
+        document.getElementById("overviewMembersWFH").textContent = membersWFHToday;
+
+        // Update today's status
+        updateTodayStatus(todayAbsences, today);
+
+        // Update team utilization
+        updateTeamUtilization();
+
+        // Update member cards
+        updateOverviewMemberCards();
+      }
+
+      function updateTodayStatus(absences, today) {
+        const container = document.getElementById("overviewTodayStatus");
+        const dateDisplay = new Date(today).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"});
+
+        if (absences.length === 0) {
+          container.innerHTML = `<div style="padding:12px;background:#dcfce7;border-radius:8px;border-left:3px solid #15803d;font-size:13px;color:#15803d">✓ Full team present</div>`;
+        } else {
+          const leaveMembers = absences.filter(a => a.wfh !== "Yes");
+          const wfhMembers = absences.filter(a => a.wfh === "Yes");
+          let html = "";
+          if (leaveMembers.length > 0) {
+            html += `<div style="padding:10px;background:#fee2e2;border-radius:8px;border-left:3px solid #dc2626;font-size:12px;color:#991b1b">
+              <strong>On Leave:</strong> ${leaveMembers.map(a => a.name).join(", ")}
+            </div>`;
+          }
+          if (wfhMembers.length > 0) {
+            html += `<div style="padding:10px;background:#fef3c7;border-radius:8px;border-left:3px solid #b45309;font-size:12px;color:#78350f">
+              <strong>WFH:</strong> ${wfhMembers.map(a => a.name).join(", ")}
+            </div>`;
+          }
+          container.innerHTML = html;
+        }
+      }
+
+      function updateTeamUtilization() {
+        const container = document.getElementById("overviewTeamUtilization");
+        const today = new Date();
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+        let stats = {
+          onLeave: 0,
+          wfh: 0,
+          present: MEMBERS.length
+        };
 
         MEMBERS.forEach(m => {
-          const leaves = leaveData[m.id];
-          const total = getActualLeaveDays(leaves);
+          const leaves = leaveData[m.id] || [];
+          let hasLeaveThisMonth = false;
+          let hasWFHThisMonth = false;
 
-          const card = document.createElement("div");
-          card.className = "member-card" + (leaves.length > 0 ? " has-leaves" : "");
-          card.dataset.name = m.name.toLowerCase();
-          card.dataset.role = m.role.toLowerCase();
-          card.dataset.id = m.id.toLowerCase();
+          leaves.forEach(l => {
+            const leaveStart = new Date(l.from);
+            const leaveEnd = new Date(l.to);
+            if (leaveEnd >= monthStart && leaveStart <= monthEnd) {
+              if (l.wfh === "Yes") hasWFHThisMonth = true;
+              else hasLeaveThisMonth = true;
+            }
+          });
 
-          card.innerHTML = `
-            <div class="avatar" style="background:${m.bg};color:${m.color}">
-              ${getInitials(m.name)}
-              <div class="leave-dot"></div>
+          if (hasLeaveThisMonth) stats.onLeave++;
+          if (hasWFHThisMonth && !hasLeaveThisMonth) stats.wfh++;
+        });
+
+        const activeToday = MEMBERS.length - document.querySelectorAll("#overviewTodayStatus [style*='dc2626']").length;
+        const html = `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:12px;color:var(--muted)">Team capacity</span>
+            <span style="font-size:14px;font-weight:600;color:var(--accent)">${Math.round((activeToday / MEMBERS.length) * 100)}% active</span>
+          </div>
+          <div style="display:flex;gap:4px;height:6px;border-radius:3px;overflow:hidden;background:#e2e8f0">
+            <div style="flex:${activeToday};background:var(--success)"></div>
+            <div style="flex:${MEMBERS.length - activeToday};background:var(--danger)"></div>
+          </div>
+        `;
+        container.innerHTML = html;
+      }
+
+      function updateOverviewMemberCards() {
+        const container = document.getElementById("overviewMemberCards");
+        const today = new Date().toISOString().split("T")[0];
+        const todayAbsences = getAbsencesForDate(today);
+
+        const html = MEMBERS.map(m => {
+          const absence = todayAbsences.find(a => a.id === m.id);
+          const total = getActualLeaveDays(leaveData[m.id] || []);
+
+          let statusBadge = '<span style="background:#dcfce7;color:#15803d;font-size:11px;padding:3px 8px;border-radius:20px;font-weight:500">✓ Present</span>';
+          if (absence) {
+            if (absence.wfh === "Yes") {
+              statusBadge = '<span style="background:#fef3c7;color:#b45309;font-size:11px;padding:3px 8px;border-radius:20px;font-weight:500">🏠 WFH</span>';
+            } else {
+              statusBadge = '<span style="background:#fee2e2;color:#dc2626;font-size:11px;padding:3px 8px;border-radius:20px;font-weight:500">Away</span>';
+            }
+          }
+
+          return `
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem;text-align:center;cursor:pointer" onclick="openDrawer('${m.id}')">
+              <div style="width:48px;height:48px;border-radius:50%;background:${m.bg};color:${m.color};display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px;margin:0 auto 0.5rem">${getInitials(m.name)}</div>
+              <div style="font-size:13px;font-weight:600;margin-bottom:2px">${m.name}</div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:0.5rem">${m.role}</div>
+              <div style="margin-bottom:8px">${statusBadge}</div>
+              <div style="font-size:11px;color:var(--muted)"><strong style="color:var(--accent)">${total}</strong> days leave</div>
             </div>
-            <div class="member-name">${m.name}</div>
-            <div class="member-role">${m.role}</div>
-            <div class="member-id">${m.id}</div>
-            <div class="leave-count">Leaves taken: <span>${total}</span> days</div>
-            <button class="btn-leave" onclick="openModal('${m.id}')">Apply Leave</button>
           `;
-          grid.appendChild(card);
-        });
+        }).join("");
 
-        const q = document.getElementById("searchInput").value;
-        if (q) filterMembers(q);
+        container.innerHTML = html;
       }
 
-      function updateNavCounts() {
-        MEMBERS.forEach(m => {
-          const total = getActualLeaveDays(leaveData[m.id]);
-          const badge = document.querySelector(`.nav-count-${m.id}`);
-          if (badge) badge.textContent = total;
+      function renderCalendar() {
+        const year = currentCalendarDate.getFullYear();
+        const month = currentCalendarDate.getMonth();
+
+        document.getElementById("calendarTitle").textContent = currentCalendarDate.toLocaleDateString("en-US", {month: "long", year: "numeric"});
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+        let days = [];
+
+        for (let i = firstDay - 1; i >= 0; i--) {
+          days.push({date: new Date(year, month - 1, daysInPrevMonth - i), otherMonth: true});
+        }
+
+        for (let d = 1; d <= daysInMonth; d++) {
+          days.push({date: new Date(year, month, d), otherMonth: false});
+        }
+
+        const remaining = 42 - days.length;
+        for (let d = 1; d <= remaining; d++) {
+          days.push({date: new Date(year, month + 1, d), otherMonth: true});
+        }
+
+        const container = document.getElementById("calendarDays");
+        container.innerHTML = "";
+
+        days.forEach(day => {
+          const dateStr = `${day.date.getFullYear()}-${String(day.date.getMonth() + 1).padStart(2, '0')}-${String(day.date.getDate()).padStart(2, '0')}`;
+          const today = (() => {
+            const t = new Date();
+            return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+          })();
+          const absences = getAbsencesForDate(dateStr);
+
+          const dayEl = document.createElement("div");
+          dayEl.className = "calendar-day";
+          if (day.otherMonth) dayEl.classList.add("other-month", "calendar-other-month");
+          if (dateStr === today) dayEl.classList.add("today");
+          if (absences.length > 0) dayEl.classList.add("has-leave");
+
+          let badgesHtml = "";
+          absences.forEach(a => {
+            const badgeType = a.wfh === "Yes" ? "wfh" : "leave";
+            badgesHtml += `<div class="calendar-badge ${badgeType}" title="${a.name}">${a.shortName}</div>`;
+          });
+
+          dayEl.innerHTML = `
+            <div class="calendar-day-num">${day.date.getDate()}</div>
+            <div class="calendar-badges">${badgesHtml}</div>
+          `;
+
+          if (!day.otherMonth && absences.length > 0) {
+            dayEl.style.cursor = "pointer";
+            dayEl.onclick = () => showAbsencesForDate(dateStr);
+          }
+
+          container.appendChild(dayEl);
         });
       }
 
-      function filterMembers(query) {
-        const q = query.toLowerCase().trim();
-        document.querySelectorAll(".member-card").forEach(card => {
-          const match = card.dataset.name.includes(q) ||
-                        card.dataset.role.includes(q) ||
-                        card.dataset.id.includes(q);
-          card.classList.toggle("hidden", !match);
+      function getAbsencesForDate(dateStr) {
+        const filtered = activeFilter === "all" ? MEMBERS : MEMBERS.filter(m => m.id === activeFilter);
+        const absences = [];
+
+        filtered.forEach(m => {
+          const leaves = leaveData[m.id] || [];
+          leaves.forEach(l => {
+            const start = new Date(l.from);
+            const end = new Date(l.to);
+            const current = new Date(dateStr);
+
+            if (current >= start && current <= end) {
+              absences.push({
+                id: m.id,
+                name: m.name,
+                shortName: getInitials(m.name),
+                wfh: l.wfh || "No",
+                reason: l.reason || "",
+                from: l.from,
+                to: l.to
+              });
+            }
+          });
         });
+
+        return absences;
       }
+
+      function showAbsencesForDate(dateStr) {
+        const absences = getAbsencesForDate(dateStr);
+        const dateObj = new Date(dateStr);
+        const dateDisplay = dateObj.toLocaleDateString("en-GB", {day: "2-digit", month: "short", year: "numeric"});
+
+        let html = `<div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
+          <h3 style="font-size:16px;font-weight:600;margin-bottom:0.5rem">${dateDisplay}</h3>
+          <p style="font-size:12px;color:var(--muted)">${absences.length} team member${absences.length !== 1 ? "s" : ""} absent</p>
+        </div>`;
+
+        if (absences.length === 0) {
+          html += `<div class="no-leaves">No absences on this date</div>`;
+        } else {
+          html += `<div class="leave-list">`;
+          absences.forEach(a => {
+            const member = MEMBERS.find(m => m.id === a.id);
+            const isWFH = a.wfh === "Yes";
+            html += `
+              <div class="leave-row">
+                <div class="leave-row-top">
+                  <div class="leave-dates">${a.name}</div>
+                  <div class="leave-days" style="${isWFH ? "background:#dcfce7;color:#15803d" : "background:#fef3c7;color:#b45309"}">
+                    ${isWFH ? "WFH" : "Leave"}
+                  </div>
+                </div>
+                <div class="leave-reason-text">${a.reason || "No reason provided"}</div>
+              </div>
+            `;
+          });
+          html += `</div>`;
+        }
+
+        document.getElementById("drawerContent").innerHTML = html;
+        document.getElementById("drawerOverlay").classList.add("show");
+      }
+
+      function previousMonth() {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+        renderCalendar();
+      }
+
+      function nextMonth() {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+        renderCalendar();
+      }
+
+      function currentMonth() {
+        currentCalendarDate = new Date();
+        renderCalendar();
+      }
+
+      function filterCalendar(memberId) {
+        activeFilter = memberId;
+        renderCalendar();
+      }
+
+      function onMemberFilterChange(el) {
+        filterCalendar(el.value);
+      }
+
+
 
       // Check overlap using single date (from === to)
       function isOverlapping(date, existingLeaves) {
@@ -539,6 +1004,7 @@
               <div class="drawer-role">${m.role} – Total: ${total} days leave</div>
             </div>
           </div>
+          <button class="btn-leave" style="margin-bottom:1rem" onclick="closeDrawer(); openModal('${m.id}')">+ Apply Leave</button>
         `;
 
         if (leaves.length === 0) {
@@ -573,18 +1039,265 @@
 
       function closeDrawer() { document.getElementById("drawerOverlay").classList.remove("show"); }
 
-      function showAll(el) {
-        document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
-        if (el) el.classList.add("active");
-        document.getElementById("searchInput").value = "";
-        document.querySelectorAll(".member-card").forEach(c => c.classList.remove("hidden"));
-      }
 
       function showToast(msg, type = "") {
         const t = document.getElementById("toast");
         t.textContent = msg;
         t.className = "toast show" + (type === "error" ? " error" : "");
         setTimeout(() => t.className = "toast", 3000);
+      }
+
+      // MEMBER MANAGEMENT
+      async function loadMembers() {
+        try {
+          const res = await fetch(API_URL + "?action=getMembers");
+          const json = await res.json();
+          console.log("Members API response:", json);
+
+          if (json.status === "success" && json.data && Array.isArray(json.data)) {
+            MEMBERS = json.data;
+            console.log("Loaded members from sheet:", MEMBERS);
+          } else {
+            console.log("No members from sheet, using default (empty)");
+            MEMBERS = [...DEFAULT_MEMBERS];
+          }
+        } catch (err) {
+          console.error("Error loading members from sheet:", err);
+          MEMBERS = [...DEFAULT_MEMBERS];
+        }
+        console.log("Final MEMBERS array:", MEMBERS);
+      }
+
+      function initColorPicker() {
+        const picker = document.getElementById("colorPicker");
+        picker.innerHTML = COLOR_PALETTE.map((c, i) => `
+          <div class="color-option ${i === 0 ? 'selected' : ''}"
+               onclick="selectColor(${i})"
+               style="background: linear-gradient(135deg, ${c.bg}, ${c.color});"
+               data-bg="${c.bg}" data-color="${c.color}"></div>
+        `).join("");
+      }
+
+      function selectColor(index) {
+        selectedColorIndex = index;
+        document.querySelectorAll(".color-option").forEach((el, i) => {
+          el.classList.toggle("selected", i === index);
+        });
+      }
+
+      function openAddMemberModal() {
+        document.getElementById("memberName").value = "";
+        document.getElementById("memberId").value = "";
+        document.getElementById("memberRole").value = "";
+        document.getElementById("memberPin").value = "";
+        selectedColorIndex = 0;
+        initColorPicker();
+        document.getElementById("addMemberOverlay").classList.add("show");
+      }
+
+      function closeAddMemberModal() {
+        document.getElementById("addMemberOverlay").classList.remove("show");
+      }
+
+      function saveMember() {
+        const name = document.getElementById("memberName").value.trim();
+        const id = document.getElementById("memberId").value.trim().toUpperCase();
+        const role = document.getElementById("memberRole").value.trim();
+        const pin = document.getElementById("memberPin").value.trim();
+        const {bg, color} = COLOR_PALETTE[selectedColorIndex];
+
+        if (!name || !id || !role || !pin) {
+          showToast("Please fill all fields", "error");
+          return;
+        }
+
+        if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+          showToast("PIN must be 4 digits", "error");
+          return;
+        }
+
+        if (MEMBERS.some(m => m.id === id)) {
+          showToast("Member ID already exists", "error");
+          return;
+        }
+
+        const payload = {
+          action: "addMember",
+          id, name, role, pin, bg, color
+        };
+
+        fetch(API_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        })
+        .then(() => {
+          closeAddMemberModal();
+          showToast(`${name} added successfully!`);
+          loadMembers().then(() => {
+            buildCards();
+            buildNav();
+          });
+        })
+        .catch(() => {
+          showToast("Failed to add member ❌", "error");
+        });
+      }
+
+      function deleteMember(id) {
+        if (!confirm("Are you sure you want to delete this member?")) return;
+
+        const payload = {
+          action: "deleteMember",
+          id: id
+        };
+
+        fetch(API_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        })
+        .then(() => {
+          MEMBERS = MEMBERS.filter(m => m.id !== id);
+          delete leaveData[id];
+          showToast("Member deleted");
+          buildCards();
+          buildNav();
+        })
+        .catch(() => {
+          showToast("Failed to delete member ❌", "error");
+        });
+      }
+
+      // VIEW SWITCHING
+      function switchView(view, el) {
+        currentView = view;
+        const overviewView = document.getElementById("overviewView");
+        const calendarView = document.getElementById("calendarView");
+        const summaryView = document.getElementById("summaryView");
+        const filterContainer = document.getElementById("memberFilterContainer");
+        const pageHeader = document.querySelector(".page-header");
+
+        overviewView.style.display = "none";
+        calendarView.style.display = "none";
+        summaryView.style.display = "none";
+        pageHeader.style.display = "none";
+
+        if (view === "overview") {
+          overviewView.style.display = "block";
+        } else if (view === "calendar") {
+          calendarView.style.display = "block";
+          pageHeader.style.display = "flex";
+        } else if (view === "summary") {
+          summaryView.style.display = "block";
+        }
+
+        // Remove active class from all top-level nav items
+        document.querySelectorAll("#navBar > .nav-item").forEach(n => n.classList.remove("active"));
+        if (el) el.classList.add("active");
+      }
+
+      function initSummaryDates() {
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+        document.getElementById("summaryStartDate").valueAsDate = firstDay;
+        document.getElementById("summaryEndDate").valueAsDate = lastDay;
+      }
+
+      function updateSummary() {
+        const startStr = document.getElementById("summaryStartDate").value;
+        const endStr = document.getElementById("summaryEndDate").value;
+
+        if (!startStr || !endStr) {
+          showToast("Please select both dates", "error");
+          return;
+        }
+
+        const startDate = new Date(startStr);
+        const endDate = new Date(endStr);
+
+        if (startDate > endDate) {
+          showToast("Start date must be before end date", "error");
+          return;
+        }
+
+        const summaryData = calculateSummary(startDate, endDate);
+        renderSummaryStats(summaryData);
+        renderSummaryTable(summaryData);
+      }
+
+      function calculateSummary(startDate, endDate) {
+        const summary = {
+          totalLeaveDays: 0,
+          totalWFHDays: 0,
+          members: []
+        };
+
+        MEMBERS.forEach(m => {
+          const leaves = leaveData[m.id] || [];
+          let memberLeaveDays = 0;
+          let memberWFHDays = 0;
+
+          leaves.forEach(l => {
+            const leaveStart = new Date(l.from);
+            const leaveEnd = new Date(l.to);
+
+            if (leaveEnd >= startDate && leaveStart <= endDate) {
+              const overlapStart = new Date(Math.max(leaveStart.getTime(), startDate.getTime()));
+              const overlapEnd = new Date(Math.min(leaveEnd.getTime(), endDate.getTime()));
+              const daysInRange = getDays(overlapStart.toISOString().split("T")[0], overlapEnd.toISOString().split("T")[0]);
+
+              if (l.wfh === "Yes") {
+                memberWFHDays += daysInRange;
+                summary.totalWFHDays += daysInRange;
+              } else {
+                memberLeaveDays += daysInRange;
+                summary.totalLeaveDays += daysInRange;
+              }
+            }
+          });
+
+          if (memberLeaveDays > 0 || memberWFHDays > 0) {
+            summary.members.push({
+              id: m.id,
+              name: m.name,
+              leaveDays: memberLeaveDays,
+              wfhDays: memberWFHDays,
+              totalDays: memberLeaveDays + memberWFHDays
+            });
+          }
+        });
+
+        return summary;
+      }
+
+      function renderSummaryStats(summaryData) {
+        document.getElementById("totalLeaveDays").textContent = summaryData.totalLeaveDays;
+        document.getElementById("totalWFHDays").textContent = summaryData.totalWFHDays;
+        document.getElementById("totalMembers").textContent = summaryData.members.length;
+      }
+
+      function renderSummaryTable(summaryData) {
+        const tbody = document.getElementById("summaryTableBody");
+
+        if (summaryData.members.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="no-data-msg">No absences found in the selected date range</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = summaryData.members.map(m => `
+          <tr>
+            <td><strong>${m.name}</strong></td>
+            <td>${m.id}</td>
+            <td><span class="leave-count-badge">${m.leaveDays}</span></td>
+            <td><span class="wfh-count">${m.wfhDays}</span></td>
+            <td>${m.totalDays} day(s)</td>
+          </tr>
+        `).join("");
       }
 
       setInterval(loadSheetData, 30000);

@@ -1,56 +1,213 @@
-function doPost(e) {
+const SHEET_NAME = "leaveData";
+const MEMBERS_SHEET = "members";
+
+function doGet(e) {
   try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    var data = JSON.parse(e.postData.contents);
+    const action = (e && e.parameter) ? e.parameter.action : null;
 
-    sheet.appendRow([
-      sheet.getLastRow(),        // S.No (auto-incremented based on row)
-      data.name,                 // Name
-      data.id,                   // Member ID
-      data.from_leave,           // Date (single date)
-      data.end_leave,            // End Date (same as from_leave for single-day)
-      data.reason,               // Reason
-      data.wfh || "No",           //  NEW: Work From Home (Yes / No)
-      new Date()
-    ]);
+    if (action === "getMembers") {
+      return getMembers();
+    }
 
-    return ContentService
-      .createTextOutput(JSON.stringify({ status: "success" }))
-      .setMimeType(ContentService.MimeType.JSON);
-
-  } catch(err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return getLeaves();
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
-function doGet() {
+function doPost(e) {
   try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    var rows = sheet.getDataRange().getValues();
-    var result = [];
-
-    for (var i = 1; i < rows.length; i++) {
-      result.push({
-        sno:        rows[i][0],
-        name:       rows[i][1],
-        id:         rows[i][2],
-        from_leave: rows[i][3],
-        end_leave:  rows[i][4],
-        reason:     rows[i][5],
-        wfh:        rows[i][6] || "No",   //  NEW: Read WFH column (col G), default "No"
-        timestamp:  rows[i][7] 
-      });
+    if (!e || !e.postData) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "error",
+        message: "No data received"
+      })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    return ContentService
-      .createTextOutput(JSON.stringify({ status: "success", data: result }))
-      .setMimeType(ContentService.MimeType.JSON);
+    const data = JSON.parse(e.postData.contents);
 
-  } catch(err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
+    if (data.action === "addMember") {
+      return addMember(data);
+    } else if (data.action === "deleteMember") {
+      return deleteMember(data);
+    } else {
+      return submitLeave(data);
+    }
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+function getLeaves() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Leave sheet not found"
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const leaves = [];
+
+  // Find column indices based on headers
+  let snCol = 0, nameCol = 1, idCol = 2, fromCol = 3, toCol = 4, reasonCol = 5, wfhCol = 6, tsCol = 7;
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[idCol] && row[idCol].toString().trim()) {
+      leaves.push({
+        sn: row[snCol] || i,
+        name: row[nameCol] || "",
+        id: row[idCol].toString().trim(),
+        from_leave: formatSheetDate(row[fromCol]),
+        end_leave: formatSheetDate(row[toCol]),
+        reason: row[reasonCol] || "",
+        wfh: (row[wfhCol] || "No").toString().trim(),
+        timestamp: row[tsCol] || ""
+      });
+    }
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({
+    status: "success",
+    data: leaves
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function getMembers() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(MEMBERS_SHEET);
+
+  if (!sheet) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Members sheet not found"
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const members = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[0]) {
+      members.push({
+        id: row[0],
+        name: row[1],
+        role: row[2],
+        pin: String(row[3]),
+        bg: row[4],
+        color: row[5]
+      });
+    }
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({
+    status: "success",
+    data: members
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function addMember(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(MEMBERS_SHEET);
+
+  if (!sheet) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Members sheet not found"
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  sheet.appendRow([
+    data.id,
+    data.name,
+    data.role,
+    data.pin,
+    data.bg,
+    data.color
+  ]);
+
+  return ContentService.createTextOutput(JSON.stringify({
+    status: "success",
+    message: "Member added"
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function deleteMember(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(MEMBERS_SHEET);
+
+  if (!sheet) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Members sheet not found"
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const sheetData = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < sheetData.length; i++) {
+    if (sheetData[i][0] === data.id) {
+      sheet.deleteRow(i + 1);
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        message: "Member deleted"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({
+    status: "error",
+    message: "Member not found"
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function submitLeave(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAME);
+
+  if (!sheet) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Leave sheet not found"
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const sn = sheet.getLastRow(); // S.No = row number
+  const timestamp = new Date().toLocaleString();
+
+  sheet.appendRow([
+    sn,
+    data.name,
+    data.id,
+    data.from_leave,
+    data.end_leave,
+    data.reason,
+    data.wfh || "No",
+    timestamp
+  ]);
+
+  return ContentService.createTextOutput(JSON.stringify({
+    status: "success",
+    message: "Leave submitted"
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function formatSheetDate(date) {
+  if (!date) return null;
+  if (typeof date === "string") return date;
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
