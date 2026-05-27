@@ -211,3 +211,40 @@ function formatSheetDate(date) {
   const day = String(d.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+
+function deleteLeave(e) {
+  const { id, from_leave, end_leave, wfh } = e.parameter;
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Leaves");
+  
+  if (!sheet) return ContentService.createTextOutput(JSON.stringify({
+    status: "error",
+    message: "Sheet not found"
+  })).setMimeType(ContentService.MimeType.JSON);
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  
+  // Find column indices
+  const idCol = headers.indexOf("Member ID") + 1;
+  const fromCol = headers.indexOf("From Date") + 1;
+  const endCol = headers.indexOf("End Date") + 1;
+  const wfhCol = headers.indexOf("WFH") + 1;
+
+  // Find and delete matching row
+  for (let i = data.length - 1; i > 0; i--) {
+    if (data[i][idCol - 1] == id && 
+        data[i][fromCol - 1] == from_leave && 
+        data[i][endCol - 1] == end_leave) {
+      sheet.deleteRow(i + 1);
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        message: "Leave record deleted"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({
+    status: "error",
+    message: "Record not found"
+  })).setMimeType(ContentService.MimeType.JSON);
+}
