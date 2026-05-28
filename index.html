@@ -49,14 +49,13 @@
       .drawer-name{font-size:14px;font-weight:600}
       .drawer-role{font-size:12px;color:#64748b}
       .leave-list{display:flex;flex-direction:column;gap:10px}
-      .leave-row{background:#f1f5f9;border:1px solid #dde3ef;border-radius:10px;padding:10px 12px;transition:0.2s}
+      .leave-row{background:#f1f5f9;border:1px solid #dde3ef;border-radius:10px;padding:12px;transition:0.2s;position:relative}
       .leave-row:hover{background:#e2e8f0}
-      .leave-row-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:8px}
-      .btn-delete-leave{background:#dc2626;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;opacity:0;transition:opacity .2s;white-space:nowrap}
-      .leave-row:hover .btn-delete-leave{opacity:1}
+      .leave-row-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px}
+      .btn-delete-leave{background:#dc2626;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;position:absolute;bottom:8px;right:8px;white-space:nowrap}
       .btn-delete-leave:hover{background:#b91c1c}
       .leave-dates{font-size:13px;font-weight:600}
-      .leave-days{font-size:11px;background:#dbeafe;color:#2563eb;padding:3px 8px;border-radius:20px;font-weight:500}
+      .leave-days{font-size:11px;background:#dbeafe;color:#2563eb;padding:3px 8px;border-radius:20px;font-weight:500;position:absolute;top:8px;right:8px}
       .leave-reason-text{font-size:12px;color:#64748b}
       /* WFH badge in drawer */
       .wfh-badge{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:500;display:inline-block;margin-top:4px}
@@ -183,6 +182,10 @@
       .radio-option input[type="radio"]{accent-color:var(--accent);width:15px;height:15px;cursor:pointer}
       .radio-option span{font-size:13px;font-weight:500;color:var(--text)}
       .radio-option.selected{border-color:var(--accent);background:#dbeafe}
+      .wfh-button-group{display:flex;gap:12px;margin-top:4px}
+      .wfh-btn{display:flex;align-items:center;justify-content:center;flex:1;padding:12px 16px;border:1.5px solid var(--border);border-radius:8px;background:#f8fafc;color:var(--text);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;font-family:'DM Sans'}
+      .wfh-btn:hover{border-color:#93c5fd;background:#e8f0fa}
+      .wfh-btn.selected{border-color:var(--accent);background:#dbeafe;color:var(--accent)}
       .radio-option.selected span{color:var(--accent)}
       .wfh-note{font-size:11.5px;color:var(--muted);margin-top:5px;display:block}
 
@@ -250,8 +253,8 @@
       <div class="nav-item" onclick="switchView('summary', this)">Summary</div>
     </nav>
     <div class="page-wrap">
-      <div class="page-header">
-        <div class="member-filter-wrap" id="memberFilterContainer">
+      <div class="page-header" id="memberFilterContainer" style="display:none">
+        <div class="member-filter-wrap">
           <label class="member-filter-label">Filter by Member:</label>
           <select id="memberFilterSelect" class="member-filter-select" onchange="onMemberFilterChange(this)">
             <option value="all">All Members</option>
@@ -295,7 +298,7 @@
           </div>
 
           <div class="stat-card">
-            <h3 style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:1rem">Team Utilization</h3>
+            <h3 style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:1rem">Team Capacity</h3>
             <div id="overviewTeamUtilization" style="display:flex;flex-direction:column;gap:8px"></div>
           </div>
         </div>
@@ -343,6 +346,10 @@
               <input type="date" id="summaryEndDate">
             </div>
             <button class="btn-apply-range" onclick="updateSummary()">Apply</button>
+          </div>
+          <div class="date-range-group" style="gap:8px;">
+            <button class="btn-apply-range" onclick="setFiscalYear()" style="background:#6366f1;">Fiscal Year</button>
+            <button class="btn-apply-range" onclick="setCalendarYear()" style="background:#8b5cf6;">Calendar Year</button>
           </div>
         </div>
 
@@ -399,19 +406,14 @@
               <input type="date" class="form-input" id="leaveDate">
             </div>
 
-            <!-- Work From Home Radio -->
+            <!-- Work From Home Buttons -->
             <div class="form-row">
-              <label class="form-label">Work From Home</label>
-              <div class="radio-group">
-                <label class="radio-option" id="wfhYesLabel">
-                  <input type="radio" name="wfh" id="wfhYes" value="Yes">
-                  <span>Yes</span>
-                </label>
-                <label class="radio-option selected" id="wfhNoLabel">
-                  <input type="radio" name="wfh" id="wfhNo" value="No" checked>
-                  <span>No</span>
-                </label>
+              <label class="form-label">Absence Type</label>
+              <div class="wfh-button-group">
+                <button type="button" class="wfh-btn selected" id="leaveBtn" onclick="selectAbsenceType('leave')">Leave</button>
+                <button type="button" class="wfh-btn" id="wfhBtn" onclick="selectAbsenceType('wfh')">Work From Home</button>
               </div>
+              <input type="hidden" id="absenceType" value="leave">
               <span class="wfh-note">⚠️ Work From Home days are not counted as leave.</span>
             </div>
 
@@ -538,14 +540,6 @@
       let currentView = "calendar";
 
       document.addEventListener("DOMContentLoaded", async function() {
-        // WFH radio highlight toggle
-        document.querySelectorAll('input[name="wfh"]').forEach(radio => {
-          radio.addEventListener('change', function() {
-            document.getElementById('wfhYesLabel').classList.toggle('selected', this.value === 'Yes');
-            document.getElementById('wfhNoLabel').classList.toggle('selected', this.value === 'No');
-          });
-        });
-
         // Close modals on Escape
         document.addEventListener("keydown", function(e) {
           if (e.key === "Escape") {
@@ -726,7 +720,7 @@
         const activeToday = MEMBERS.length - document.querySelectorAll("#overviewTodayStatus [style*='dc2626']").length;
         const html = `
           <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-            <span style="font-size:12px;color:var(--muted)">Team capacity</span>
+            <span style="font-size:12px;color:var(--muted)">Team attendance</span>
             <span style="font-size:14px;font-weight:600;color:var(--accent)">${Math.round((activeToday / MEMBERS.length) * 100)}% active</span>
           </div>
           <div style="display:flex;gap:4px;height:6px;border-radius:3px;overflow:hidden;background:#e2e8f0">
@@ -932,7 +926,14 @@
       }
 
       function getWFHValue() {
-        return document.querySelector('input[name="wfh"]:checked').value;
+        const type = document.getElementById("absenceType").value;
+        return type === "wfh" ? "Yes" : "No";
+      }
+
+      function selectAbsenceType(type) {
+        document.getElementById("absenceType").value = type;
+        document.getElementById("leaveBtn").classList.toggle("selected", type === "leave");
+        document.getElementById("wfhBtn").classList.toggle("selected", type === "wfh");
       }
 
       function submitLeave() {
@@ -1024,10 +1025,8 @@
         document.getElementById("leaveReason").value = "";
         ["p1","p2","p3","p4"].forEach(id => document.getElementById(id).value = "");
         document.getElementById("pinError").style.display = "none";
-        // Reset WFH to "No"
-        document.getElementById("wfhNo").checked = true;
-        document.getElementById("wfhYesLabel").classList.remove("selected");
-        document.getElementById("wfhNoLabel").classList.add("selected");
+        // Reset to Leave
+        selectAbsenceType("leave");
       }
 
       // DRAWER
@@ -1044,7 +1043,7 @@
               <div class="drawer-role">${m.role} – Total: ${total} days leave</div>
             </div>
           </div>
-          <button class="btn-leave" style="margin-bottom:1rem" onclick="closeDrawer(); openModal('${m.id}')">+ Apply Leave</button>
+          <button class="btn-leave" style="margin-bottom:1rem" onclick="closeDrawer(); openModal('${m.id}')">Apply</button>
         `;
 
         if (leaves.length === 0) {
@@ -1058,11 +1057,11 @@
               : `<div class="leave-days">${getDays(l.from, l.to)} day(s)</div>`;
 
             html += `
-              <div class="leave-row" style="position:relative">
+              <div class="leave-row">
+                <button class="btn-delete-leave" onclick="deleteLeave('${m.id}', ${idx}, this)" title="Delete record">Delete</button>
                 <div class="leave-row-top">
                   <div class="leave-dates">${formatDate(l.from)}</div>
                   ${daysLabel}
-                  <button class="btn-delete-leave" onclick="deleteLeave('${m.id}', ${idx}, this)" title="Delete record">Delete</button>
                 </div>
                 <div class="leave-reason-text">${l.reason || "No reason provided"}</div>
                 <span class="wfh-badge ${isWFH ? 'wfh-yes' : 'wfh-no'}">
@@ -1320,6 +1319,35 @@
 
         document.getElementById("summaryStartDate").valueAsDate = firstDay;
         document.getElementById("summaryEndDate").valueAsDate = lastDay;
+      }
+
+      function setFiscalYear() {
+        const today = new Date();
+        let fiscalStart, fiscalEnd;
+
+        if (today.getMonth() >= 9) {
+          // Oct-Dec: fiscal year is Oct (current year) to Sep (next year)
+          fiscalStart = new Date(today.getFullYear(), 9, 1);
+          fiscalEnd = new Date(today.getFullYear() + 1, 8, 30);
+        } else {
+          // Jan-Sep: fiscal year is Oct (previous year) to Sep (current year)
+          fiscalStart = new Date(today.getFullYear() - 1, 9, 1);
+          fiscalEnd = new Date(today.getFullYear(), 8, 30);
+        }
+
+        document.getElementById("summaryStartDate").valueAsDate = fiscalStart;
+        document.getElementById("summaryEndDate").valueAsDate = fiscalEnd;
+        updateSummary();
+      }
+
+      function setCalendarYear() {
+        const today = new Date();
+        const calendarStart = new Date(today.getFullYear(), 0, 1);
+        const calendarEnd = new Date(today.getFullYear(), 11, 31);
+
+        document.getElementById("summaryStartDate").valueAsDate = calendarStart;
+        document.getElementById("summaryEndDate").valueAsDate = calendarEnd;
+        updateSummary();
       }
 
       function updateSummary() {
