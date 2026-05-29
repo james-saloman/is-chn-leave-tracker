@@ -61,6 +61,10 @@
       .wfh-badge{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:500;display:inline-block;margin-top:4px}
       .wfh-yes{background:#dcfce7;color:#15803d}
       .wfh-no{background:#fee2e2;color:#dc2626}
+      /* Filter buttons in drawer */
+      .filter-btn{background:#f1f5f9;color:#64748b;border:1px solid #dde3ef;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s}
+      .filter-btn:hover{background:#e2e8f0;color:#1e293b}
+      .filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 
       nav{background:#fff;border-bottom:1px solid var(--border);padding:0 2rem;display:flex;gap:0;overflow-x:hidden;position:sticky;top:64px;z-index:99}
       .nav-item{display:flex;align-items:center;gap:6px;padding:0 16px;height:46px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;flex-shrink:0}
@@ -241,11 +245,11 @@
           <img src="image/logo.jpg" alt="Company Logo">
         </div>
         <div>
-          <div class="logo-name">DESIGN GROUP </div>
-          <div class="logo-sub">IS-CHN - Leave Tracker</div>
+          <div class="logo-name">BW DESIGN GROUP </div>
+          <div class="logo-sub">CHN-IS Tracker</div>
         </div>
       </div>
-      <button class="btn-add-member" onclick="openAddMemberModal()">+ Add Member</button>
+      <button class="btn-add-member" onclick="openAddMemberModal()">+ Add Professional</button>
     </header>
     <nav id="navBar">
       <div class="nav-item active" onclick="switchView('overview', this)">Overview</div>
@@ -255,9 +259,9 @@
     <div class="page-wrap">
       <div class="page-header" id="memberFilterContainer" style="display:none">
         <div class="member-filter-wrap">
-          <label class="member-filter-label">Filter by Member:</label>
+          <label class="member-filter-label">Filter by Professional:</label>
           <select id="memberFilterSelect" class="member-filter-select" onchange="onMemberFilterChange(this)">
-            <option value="all">All Members</option>
+            <option value="all">All Professionals</option>
           </select>
         </div>
       </div>
@@ -273,15 +277,15 @@
           <div class="stat-card">
             <div class="stat-label">Total Team Members</div>
             <div class="stat-value" id="overviewTotalMembers">0</div>
-            <div class="stat-desc">Active team members</div>
+            <div class="stat-desc">Active team Members</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Members on Leave</div>
+            <div class="stat-label">Professionals on Leave</div>
             <div class="stat-value" id="overviewMembersOnLeave">0</div>
             <div class="stat-desc">Currently absent today</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Members WFH Today</div>
+            <div class="stat-label">Professionals on WFH Today</div>
             <div class="stat-value" id="overviewMembersWFH">0</div>
             <div class="stat-desc">Working from home</div>
           </div>
@@ -304,7 +308,15 @@
         </div>
 
         <div class="stat-card">
-          <h3 style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:1rem">Team Members</h3>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:1rem">
+            <h3 style="font-size:14px;font-weight:600;color:var(--text)">Team Members</h3>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="filter-btn active" onclick="setCardFilter('all')">All</button>
+              <button class="filter-btn" onclick="setCardFilter('month')">This Month</button>
+              <button class="filter-btn" onclick="setCardFilter('year')">This Year</button>
+              <button class="filter-btn" onclick="setCardFilter('fiscal')">Fiscal Year</button>
+            </div>
+          </div>
           <div id="overviewMemberCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem"></div>
         </div>
       </div>
@@ -462,18 +474,18 @@
       <div class="modal">
         <div class="modal-head">
           <div>
-            <h3 id="memberModalTitle">Add New Member</h3>
+            <h3 id="memberModalTitle">Add New Professional</h3>
             <p>Create a new team member profile</p>
           </div>
           <button class="modal-close" onclick="closeAddMemberModal()">&#x2715;</button>
         </div>
         <div class="modal-body">
           <div class="member-form-row">
-            <label class="member-form-label">Member Name</label>
+            <label class="member-form-label">Professional Name</label>
             <input type="text" class="member-form-input" id="memberName" placeholder="Full name">
           </div>
           <div class="member-form-row">
-            <label class="member-form-label">Member ID</label>
+            <label class="member-form-label">Professional ID</label>
             <input type="text" class="member-form-input" id="memberId" placeholder="e.g., M014">
           </div>
           <div class="member-form-row">
@@ -488,7 +500,7 @@
             <label class="member-form-label">Avatar Color</label>
             <div class="color-picker" id="colorPicker"></div>
           </div>
-          <button class="btn-submit" onclick="saveMember()">Add Member</button>
+          <button class="btn-submit" onclick="saveMember()">Add Professional</button>
         </div>
       </div>
     </div>
@@ -573,7 +585,7 @@
 
       function buildNav() {
         const select = document.getElementById("memberFilterSelect");
-        select.innerHTML = `<option value="all">All Members</option>`;
+        select.innerHTML = `<option value="all">All Professionals</option>`;
         MEMBERS.forEach(m => {
           const option = document.createElement("option");
           option.value = m.id;
@@ -617,6 +629,13 @@
       function getActualLeaveDays(leaves) {
         return leaves
           .filter(l => (l.wfh || "No") !== "Yes")
+          .reduce((a, l) => a + getDays(l.from, l.to), 0);
+      }
+
+      // Count only WFH entries
+      function getWFHDays(leaves) {
+        return leaves
+          .filter(l => (l.wfh || "No") === "Yes")
           .reduce((a, l) => a + getDays(l.from, l.to), 0);
       }
 
@@ -735,10 +754,14 @@
         const container = document.getElementById("overviewMemberCards");
         const today = new Date().toISOString().split("T")[0];
         const todayAbsences = getAbsencesForDate(today);
+        const cardFilterPeriod = window.cardFilterPeriod || 'all';
 
         const html = MEMBERS.map(m => {
           const absence = todayAbsences.find(a => a.id === m.id);
-          const total = getActualLeaveDays(leaveData[m.id] || []);
+          const allLeaves = leaveData[m.id] || [];
+          const filteredLeaves = cardFilterPeriod === 'all' ? allLeaves : filterLeavesByPeriod(allLeaves, cardFilterPeriod);
+          const total = getActualLeaveDays(filteredLeaves);
+          const wfh = getWFHDays(filteredLeaves);
 
           let statusBadge = '<span style="background:#dcfce7;color:#15803d;font-size:11px;padding:3px 8px;border-radius:20px;font-weight:500">✓ Present</span>';
           if (absence) {
@@ -755,7 +778,10 @@
               <div style="font-size:13px;font-weight:600;margin-bottom:2px">${m.name}</div>
               <div style="font-size:11px;color:var(--muted);margin-bottom:0.5rem">${m.role}</div>
               <div style="margin-bottom:8px">${statusBadge}</div>
-              <div style="font-size:11px;color:var(--muted)"><strong style="color:var(--accent)">${total}</strong> days leave</div>
+              <div style="font-size:11px;color:var(--muted);display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+                <span><strong style="color:var(--accent)">${total}</strong> days leave</span>
+                ${wfh > 0 ? `<span>|  <strong style="color:#15803d">${wfh}</strong> WFH</span>` : ''}
+              </div>
             </div>
           `;
         }).join("");
@@ -1029,36 +1055,85 @@
         selectAbsenceType("leave");
       }
 
+      // Filter leaves by time period
+      function filterLeavesByPeriod(leaves, period) {
+        const today = new Date();
+        let startDate, endDate;
+
+        switch(period) {
+          case 'month':
+            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            break;
+          case 'year':
+            startDate = new Date(today.getFullYear(), 0, 1);
+            endDate = new Date(today.getFullYear(), 11, 31);
+            break;
+          case 'fiscal':
+            if (today.getMonth() >= 9) {
+              startDate = new Date(today.getFullYear(), 9, 1);
+              endDate = new Date(today.getFullYear() + 1, 8, 31);
+            } else {
+              startDate = new Date(today.getFullYear() - 1, 9, 1);
+              endDate = new Date(today.getFullYear(), 8, 31);
+            }
+            break;
+          default:
+            return leaves;
+        }
+
+        return leaves.filter(l => {
+          const leaveStart = new Date(l.from);
+          return leaveStart >= startDate && leaveStart <= endDate;
+        });
+      }
+
       // DRAWER
       function openDrawer(id) {
         const m = MEMBERS.find(x => x.id === id);
-        const leaves = [...leaveData[id]].reverse();
+        const allLeaves = [...leaveData[id]].reverse();
         const total = getActualLeaveDays(leaveData[id]);
+        const wfh = getWFHDays(leaveData[id]);
+        const period = window.drawerFilterPeriod || 'all';
+        const filteredLeaves = period === 'all' ? allLeaves : filterLeavesByPeriod([...leaveData[id]].reverse(), period);
 
         let html = `
           <div class="drawer-member-info">
             <div class="drawer-avatar" style="background:${m.bg};color:${m.color}">${getInitials(m.name)}</div>
             <div>
               <div class="drawer-name">${m.name}</div>
-              <div class="drawer-role">${m.role} – Total: ${total} days leave</div>
+              <div class="drawer-role">${m.role}</div>
+              <div style="display:flex;gap:8px;margin-top:6px">
+                <span style="font-size:11px;background:#fef3c7;color:#b45309;padding:3px 8px;border-radius:20px;font-weight:500">${total} Leave</span>
+                ${wfh > 0 ? `<span style="font-size:11px;background:#dcfce7;color:#15803d;padding:3px 8px;border-radius:20px;font-weight:500">${wfh} WFH</span>` : ''}
+              </div>
             </div>
           </div>
           <button class="btn-leave" style="margin-bottom:1rem" onclick="closeDrawer(); openModal('${m.id}')">Apply</button>
+
+          <div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap">
+            <button class="filter-btn ${period === 'all' ? 'active' : ''}" onclick="setDrawerFilter('all', '${m.id}')">All</button>
+            <button class="filter-btn ${period === 'month' ? 'active' : ''}" onclick="setDrawerFilter('month', '${m.id}')">This Month</button>
+            <button class="filter-btn ${period === 'year' ? 'active' : ''}" onclick="setDrawerFilter('year', '${m.id}')">This Year</button>
+            <button class="filter-btn ${period === 'fiscal' ? 'active' : ''}" onclick="setDrawerFilter('fiscal', '${m.id}')">Fiscal Year</button>
+          </div>
         `;
 
-        if (leaves.length === 0) {
+        if (filteredLeaves.length === 0) {
           html += `<div class="no-leaves">No leave records</div>`;
         } else {
           html += `<div class="leave-list">`;
-          leaves.forEach((l, idx) => {
+          filteredLeaves.forEach((l, idx) => {
             const isWFH = (l.wfh || "No") === "Yes";
             const daysLabel = isWFH
               ? `<div class="leave-days" style="background:#dcfce7;color:#15803d">WFH</div>`
               : `<div class="leave-days">${getDays(l.from, l.to)} day(s)</div>`;
 
+            const originalIdx = allLeaves.indexOf(l);
+
             html += `
               <div class="leave-row">
-                <button class="btn-delete-leave" onclick="deleteLeave('${m.id}', ${idx}, this)" title="Delete record">Delete</button>
+                <button class="btn-delete-leave" onclick="deleteLeave('${m.id}', ${originalIdx}, this)" title="Delete record">Delete</button>
                 <div class="leave-row-top">
                   <div class="leave-dates">${formatDate(l.from)}</div>
                   ${daysLabel}
@@ -1075,6 +1150,26 @@
 
         document.getElementById("drawerContent").innerHTML = html;
         document.getElementById("drawerOverlay").classList.add("show");
+      }
+
+      function setDrawerFilter(period, memberId) {
+        window.drawerFilterPeriod = period;
+        openDrawer(memberId);
+      }
+
+      function setCardFilter(period) {
+        window.cardFilterPeriod = period;
+        updateOverviewMemberCards();
+        // Update active state for filter buttons
+        document.querySelectorAll(".stat-card .filter-btn").forEach(btn => {
+          const btnText = btn.textContent.toLowerCase();
+          const isActive =
+            (period === 'all' && btnText === 'all') ||
+            (period === 'month' && btnText.includes('month')) ||
+            (period === 'year' && btnText === 'this year') ||
+            (period === 'fiscal' && btnText.includes('fiscal'));
+          btn.classList.toggle("active", isActive);
+        });
       }
 
       function closeDrawer() { document.getElementById("drawerOverlay").classList.remove("show"); }
