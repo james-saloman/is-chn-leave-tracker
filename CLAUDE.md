@@ -8,7 +8,9 @@ Single-page leave tracking dashboard: vanilla HTML/CSS/JS frontend, Google Sheet
 
 **Key files:**
 
-- `index.html` — Complete app (592 lines, all logic embedded)
+- `index.html` — HTML structure and DOM layout
+- `script.js` — All JavaScript logic (data loading, UI interactions, state management)
+- `styles.css` — All CSS styling (uses CSS custom properties for theming)
 - Google Apps Script — Web app for `doGet()` (fetch leaves) and `doPost(e)` (submit leave)
 - `.github/workflows/static.yml` — Auto-deploys to Pages on push to main
 
@@ -23,8 +25,10 @@ Single-page leave tracking dashboard: vanilla HTML/CSS/JS frontend, Google Sheet
 
 **Key state:**
 
-- `MEMBERS` array (hardcoded in index.html): `{id, name, role, bg, color}`
+- `MEMBERS` array (loaded dynamically via `loadMembers()` from Google Sheet): `{id, name, role, bg, color}`
 - `leaveData` object: leave records keyed by member ID
+- `currentView`: tracks active view ("overview", "calendar", or "summary")
+- `activeFilter`: tracks active filter state
 - Sheet columns: S.No, Name, Member ID, From Date, End Date, Reason, WFH, Timestamp
 
 **UI Layout:**
@@ -49,26 +53,25 @@ Single-page leave tracking dashboard: vanilla HTML/CSS/JS frontend, Google Sheet
 
 ## Common Tasks
 
-**Test locally:** No build needed. Open `index.html` directly or run `python3 -m http.server 8000` to avoid CORS issues.
+**Test locally:** No build needed. Open `index.html` directly in browser or run `python3 -m http.server 8000` to serve all files and avoid CORS issues.
 
-**Update Google Apps Script endpoint:** Edit `API_URL` in index.html:
+**Update Google Apps Script endpoint:** Edit `API_URL` in script.js:
 ```javascript
-const API_URL = "https://script.google.com/macros/d/{YOUR_SCRIPT_ID}/userweb";
+const API_URL = "https://script.google.com/macros/s/{YOUR_SCRIPT_ID}/exec";
 ```
 
-**Add a member:** Edit `MEMBERS` array in index.html:
-```javascript
-{id: "id", name: "Name", role: "Title", bg: "#hex", color: "#hex"}
-```
+**Add a member:** Members are now loaded dynamically from Google Sheet via `loadMembers()`. To add members, use the "+ Add Professional" button in the UI or add entries directly to the Sheet.
 
 **Add filter tab:** Add nav button calling filter function (e.g., `filterWithLeaves()`, `filterWFH()`).
 
-**Styling:** All CSS in `<style>` tag in index.html. Uses CSS custom properties.
+**Styling:** All CSS in `styles.css`. Uses CSS custom properties (see `:root` for color/layout/text variables).
 
-**Key JS functions:**
-- Data: `loadSheetData()`, `formatMemberCards()`
-- UI: `openModal(id)`, `closeModal()`, `openDrawer(id)`, `closeDrawer()`, `submitLeave()`
+**Key JS functions (in script.js):**
+
+- Data: `loadMembers()`, `loadSheetData()`, `formatMemberCards()`
+- UI: `openModal(id)`, `closeModal()`, `openAddMemberModal()`, `closeAddMemberModal()`, `switchView()`, `submitLeave()`
 - Utils: `getDays(from, to)`, `getInitials(name)`, `formatDate(date)`, `getActualLeaveDays()`
+- Views: `renderOverviewView()`, `renderCalendarView()`, `renderSummaryView()`
 
 ## Deployment
 

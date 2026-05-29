@@ -250,7 +250,7 @@ function updateOverviewMemberCards() {
         <div style="font-size:11px;color:var(--muted);margin-bottom:0.5rem">${m.role}</div>
         <div style="margin-bottom:8px">${statusBadge}</div>
         <div style="font-size:11px;color:var(--muted);display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
-          <span><strong style="color:var(--accent)">${total}</strong> days leave</span>
+          <span><strong style="color:var(--accent)">${total}</strong> leave</span>
           ${wfh > 0 ? `<span>|  <strong style="color:#15803d">${wfh}</strong> WFH</span>` : ''}
         </div>
       </div>
@@ -483,7 +483,17 @@ function submitLeave() {
 }
 
 // HELPERS
-function getDays(f, t) { return (new Date(t) - new Date(f)) / (1000 * 60 * 60 * 24) + 1; }
+function parseDate(dateStr) {
+  const [year, month, day] = dateStr.split("-");
+  return new Date(year, parseInt(month) - 1, day);
+}
+
+function getDays(f, t) {
+  const from = parseDate(f);
+  const to = parseDate(t);
+  const days = Math.floor((to - from) / (1000 * 60 * 60 * 24)) + 1;
+  return Math.max(0, days);
+}
 function getInitials(name) { return name.split(" ").map(n => n[0]).join("").toUpperCase(); }
 function getPin() { return ["p1","p2","p3","p4"].map(id => document.getElementById(id).value).join(""); }
 
@@ -922,8 +932,8 @@ function updateSummary() {
     return;
   }
 
-  const startDate = new Date(startStr);
-  const endDate = new Date(endStr);
+  const startDate = parseDate(startStr);
+  const endDate = parseDate(endStr);
 
   if (startDate > endDate) {
     showToast("Start date must be before end date", "error");
@@ -948,13 +958,16 @@ function calculateSummary(startDate, endDate) {
     let memberWFHDays = 0;
 
     leaves.forEach(l => {
-      const leaveStart = new Date(l.from);
-      const leaveEnd = new Date(l.to);
+      const leaveStart = parseDate(l.from);
+      const leaveEnd = parseDate(l.to);
 
       if (leaveEnd >= startDate && leaveStart <= endDate) {
-        const overlapStart = new Date(Math.max(leaveStart.getTime(), startDate.getTime()));
-        const overlapEnd = new Date(Math.min(leaveEnd.getTime(), endDate.getTime()));
-        const daysInRange = getDays(overlapStart.toISOString().split("T")[0], overlapEnd.toISOString().split("T")[0]);
+        const overlapStart = leaveStart >= startDate ? leaveStart : startDate;
+        const overlapEnd = leaveEnd <= endDate ? leaveEnd : endDate;
+
+        const startStr = overlapStart.getFullYear() + "-" + String(overlapStart.getMonth() + 1).padStart(2, "0") + "-" + String(overlapStart.getDate()).padStart(2, "0");
+        const endStr = overlapEnd.getFullYear() + "-" + String(overlapEnd.getMonth() + 1).padStart(2, "0") + "-" + String(overlapEnd.getDate()).padStart(2, "0");
+        const daysInRange = getDays(startStr, endStr);
 
         if (l.wfh === "Yes") {
           memberWFHDays += daysInRange;
