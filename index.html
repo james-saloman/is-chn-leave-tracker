@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DG (CSI) – Leave Tracker</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
@@ -18,7 +19,10 @@
           <div class="logo-sub">CHN-IS Tracker</div>
         </div>
       </div>
-      <button class="btn-add-member" onclick="openAddMemberModal()">+ Add Professional</button>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-add-member" onclick="openAddMemberModal()">+ Add Professional</button>
+        <button class="btn-add-member" onclick="window.open('https://staffing.docker.bwdesigngroup.dev/staffing', '_blank')" style="background:#4b5563;">🔗 Staffing</button>
+      </div>
     </header>
     <nav id="navBar">
       <div class="nav-item active" onclick="switchView('overview', this)">Overview</div>
@@ -44,9 +48,9 @@
 
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-label">Total Team Members</div>
+            <div class="stat-label">Total Professionals</div>
             <div class="stat-value" id="overviewTotalMembers">0</div>
-            <div class="stat-desc">Active team Members</div>
+            <div class="stat-desc">Active professionals</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Professionals on Leave</div>
@@ -131,6 +135,7 @@
           <div class="date-range-group" style="gap:8px;">
             <button class="btn-apply-range" onclick="setFiscalYear()" style="background:#6366f1;">Fiscal Year</button>
             <button class="btn-apply-range" onclick="setCalendarYear()" style="background:#8b5cf6;">Calendar Year</button>
+            <button class="btn-apply-range" onclick="downloadSummaryPDF()" style="background:#059669;"> Download PDF</button>
           </div>
         </div>
 
@@ -155,8 +160,8 @@
         <table class="summary-table">
           <thead>
             <tr>
-              <th>Member Name</th>
-              <th>Member ID</th>
+              <th>Professional Name</th>
+              <th>Professional ID</th>
               <th>Leave Days</th>
               <th>WFH Days</th>
               <th>Total Absences</th>

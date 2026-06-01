@@ -1018,4 +1018,103 @@ function renderSummaryTable(summaryData) {
   `).join("");
 }
 
+function downloadSummaryPDF() {
+  const startStr = document.getElementById("summaryStartDate").value;
+  const endStr = document.getElementById("summaryEndDate").value;
+
+  if (!startStr || !endStr) {
+    showToast("Please select both start and end dates", "error");
+    return;
+  }
+
+  const startDate = new Date(startStr);
+  const endDate = new Date(endStr);
+  const summaryData = calculateSummary(startDate, endDate);
+
+  // Create PDF content
+  const element = document.createElement("div");
+  element.style.padding = "20px";
+  element.style.fontFamily = "Arial, sans-serif";
+  element.style.fontSize = "12px";
+
+  const header = `
+    <div style="text-align:center;margin-bottom:30px;">
+      <h1 style="margin:0 0 5px 0;font-size:24px;">BW DESIGN GROUP</h1>
+      <h2 style="margin:0 0 15px 0;font-size:14px;color:#666;">Leave Report</h2>
+      <p style="margin:0;color:#999;">Period: ${formatDate(startStr)} to ${formatDate(endStr)}</p>
+    </div>
+  `;
+
+  const stats = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:30px;">
+      <div style="border:1px solid #ddd;padding:15px;text-align:center;border-radius:4px;">
+        <div style="font-size:28px;font-weight:bold;color:#2563eb;">${summaryData.totalLeaveDays}</div>
+        <div style="color:#666;margin-top:5px;">Total Leave Days</div>
+      </div>
+      <div style="border:1px solid #ddd;padding:15px;text-align:center;border-radius:4px;">
+        <div style="font-size:28px;font-weight:bold;color:#059669;">${summaryData.totalWFHDays}</div>
+        <div style="color:#666;margin-top:5px;">Total WFH Days</div>
+      </div>
+      <div style="border:1px solid #ddd;padding:15px;text-align:center;border-radius:4px;">
+        <div style="font-size:28px;font-weight:bold;color:#6366f1;">${summaryData.members.length}</div>
+        <div style="color:#666;margin-top:5px;">Team Members</div>
+      </div>
+    </div>
+  `;
+
+  let tableHtml = `
+    <table style="width:100%;border-collapse:collapse;margin-top:20px;">
+      <thead>
+        <tr style="background-color:#f3f4f6;border-bottom:2px solid #ddd;">
+          <th style="padding:12px;text-align:left;border:1px solid #ddd;font-weight:bold;">Professional Name</th>
+          <th style="padding:12px;text-align:left;border:1px solid #ddd;font-weight:bold;">Professional ID</th>
+          <th style="padding:12px;text-align:center;border:1px solid #ddd;font-weight:bold;">Leave Days</th>
+          <th style="padding:12px;text-align:center;border:1px solid #ddd;font-weight:bold;">WFH Days</th>
+          <th style="padding:12px;text-align:center;border:1px solid #ddd;font-weight:bold;">Total Absences</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  if (summaryData.members.length === 0) {
+    tableHtml += `<tr><td colspan="5" style="padding:12px;text-align:center;color:#999;border:1px solid #ddd;">No absences found in the selected date range</td></tr>`;
+  } else {
+    summaryData.members.forEach(m => {
+      tableHtml += `
+        <tr style="border-bottom:1px solid #ddd;">
+          <td style="padding:12px;border:1px solid #ddd;">${m.name}</td>
+          <td style="padding:12px;border:1px solid #ddd;">${m.id}</td>
+          <td style="padding:12px;border:1px solid #ddd;text-align:center;">${m.leaveDays}</td>
+          <td style="padding:12px;border:1px solid #ddd;text-align:center;">${m.wfhDays}</td>
+          <td style="padding:12px;border:1px solid #ddd;text-align:center;">${m.totalDays}</td>
+        </tr>
+      `;
+    });
+  }
+
+  tableHtml += `
+      </tbody>
+    </table>
+  `;
+
+  const footer = `
+    <div style="margin-top:40px;border-top:1px solid #ddd;padding-top:20px;color:#999;font-size:10px;text-align:center;">
+      <p>Generated on ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+    </div>
+  `;
+
+  element.innerHTML = header + stats + tableHtml + footer;
+
+  // Generate PDF
+  const opt = {
+    margin: 10,
+    filename: `leave-report-${startStr}-to-${endStr}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+  };
+
+  html2pdf().set(opt).from(element).save();
+}
+
 setInterval(loadSheetData, 30000);
