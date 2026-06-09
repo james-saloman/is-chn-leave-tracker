@@ -33,6 +33,8 @@ function doPost(e) {
       return addMember(data);
     } else if (data.action === "deleteMember") {
       return deleteMember(data);
+    } else if (data.action === "skillAssessment") {
+      return submitSkillAssessment(data);
     } else {
       return submitLeave(data);
     }
@@ -210,6 +212,62 @@ function formatSheetDate(date) {
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function submitSkillAssessment(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ASSESSMENT_SHEET = "Skill Assessment";
+  let sheet = ss.getSheetByName(ASSESSMENT_SHEET);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(ASSESSMENT_SHEET);
+    sheet.appendRow([
+      "Name", "Background", "Experience", "Submitted At",
+      "ign1_rating","ign1_evidence","ign2_rating","ign2_evidence",
+      "ign3_rating","ign3_evidence","ign4_rating","ign4_evidence",
+      "ign5_rating","ign5_evidence","ign6_rating","ign6_evidence",
+      "ign7_rating","ign7_evidence","ign8_rating","ign8_evidence",
+      "py1_rating","py1_evidence","py2_rating","py2_evidence",
+      "py3_rating","py3_evidence","py4_rating","py4_evidence",
+      "py5_rating","py5_evidence","py6_rating","py6_evidence",
+      "git1_rating","git1_evidence","git2_rating","git2_evidence",
+      "git3_rating","git3_evidence","git4_rating","git4_evidence",
+      "git5_rating","git5_evidence",
+      "db1_rating","db1_evidence","db2_rating","db2_evidence",
+      "db3_rating","db3_evidence","db4_rating","db4_evidence",
+      "db5_rating","db5_evidence",
+      "ux1_rating","ux1_evidence","ux2_rating","ux2_evidence",
+      "ux3_rating","ux3_evidence","ux4_rating","ux4_evidence",
+      "mes1_rating","mes1_evidence","mes2_rating","mes2_evidence",
+      "mes3_rating","mes3_evidence","mes4_rating","mes4_evidence",
+      "inf1_rating","inf1_evidence","inf2_rating","inf2_evidence",
+      "inf3_rating","inf3_evidence","inf4_rating","inf4_evidence",
+      "inf5_rating","inf5_evidence","inf6_rating","inf6_evidence",
+    ]);
+  }
+
+  const ids = [
+    "ign1","ign2","ign3","ign4","ign5","ign6","ign7","ign8",
+    "py1","py2","py3","py4","py5","py6",
+    "git1","git2","git3","git4","git5",
+    "db1","db2","db3","db4","db5",
+    "ux1","ux2","ux3","ux4",
+    "mes1","mes2","mes3","mes4",
+    "inf1","inf2","inf3","inf4","inf5","inf6",
+  ];
+
+  const row = [data.name, data.background, data.experience, data.submitted_at];
+  ids.forEach(id => {
+    row.push(data[id + "_rating"] !== undefined ? data[id + "_rating"] : "—");
+    row.push(data[id + "_evidence"] || "");
+  });
+
+  sheet.appendRow(row);
+
+  return ContentService.createTextOutput(JSON.stringify({
+    status: "success",
+    message: "Assessment submitted"
+  })).setMimeType(ContentService.MimeType.JSON);
 }
 
 function deleteLeave(e) {

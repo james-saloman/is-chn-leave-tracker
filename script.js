@@ -863,12 +863,14 @@ function switchView(view, el) {
   const overviewView = document.getElementById("overviewView");
   const calendarView = document.getElementById("calendarView");
   const summaryView = document.getElementById("summaryView");
+  const assessmentView = document.getElementById("assessmentView");
   const filterContainer = document.getElementById("memberFilterContainer");
   const pageHeader = document.querySelector(".page-header");
 
   overviewView.style.display = "none";
   calendarView.style.display = "none";
   summaryView.style.display = "none";
+  assessmentView.style.display = "none";
   pageHeader.style.display = "none";
 
   if (view === "overview") {
@@ -878,6 +880,9 @@ function switchView(view, el) {
     pageHeader.style.display = "flex";
   } else if (view === "summary") {
     summaryView.style.display = "block";
+  } else if (view === "assessment") {
+    assessmentView.style.display = "block";
+    if (!window._saBuilt) { saBuildForm(); window._saBuilt = true; }
   }
 
   // Remove active class from all top-level nav items
@@ -1115,6 +1120,167 @@ function downloadSummaryPDF() {
   };
 
   html2pdf().set(opt).from(element).save();
+}
+
+// ── SKILL ASSESSMENT ────────────────────────────────────────────────────────
+
+
+const SA_DOMAINS = [
+  { title: "IGNITION PLATFORM", skills: [
+    { id:"ign1", name:"Ignition Designer fundamentals", desc:"UDTs, tag browser, project structure, basic navigation" },
+    { id:"ign2", name:"Perspective components & views", desc:"Binding, flex layout, component config, responsive design" },
+    { id:"ign3", name:"Vision (legacy) screens", desc:"Window design, templates, popup management" },
+    { id:"ign4", name:"Named queries & database connectivity", desc:"Writing named queries, parameterised queries, DB connections" },
+    { id:"ign5", name:"Tag historian & reporting", desc:"Historian config, SQL Bridge, report module" },
+    { id:"ign6", name:"Alarm management", desc:"Alarm config, shelving, pipelines, journal queries" },
+    { id:"ign7", name:"Transaction groups & OPC tags", desc:"OPC-UA browsing, tag imports, transaction groups" },
+    { id:"ign8", name:"Gateway config & architecture", desc:"Gateway network, redundancy, module management" },
+  ]},
+  { title: "PYTHON SCRIPTING", skills: [
+    { id:"py1", name:"Python basics", desc:"Variables, loops, conditionals, functions, data types" },
+    { id:"py2", name:"Ignition scripting (Jython)", desc:"Event scripts, gateway scripts, system.* API functions" },
+    { id:"py3", name:"File / data handling", desc:"CSV, JSON parsing, file I/O, datetime manipulation" },
+    { id:"py4", name:"REST API calls from Python", desc:"requests library, JSON handling, authentication headers" },
+    { id:"py5", name:"Pandas / data manipulation", desc:"DataFrames, filtering, aggregation, merge operations" },
+    { id:"py6", name:"Scheduled scripts & automation", desc:"Cron-like tasks, gateway timer scripts, error handling" },
+  ]},
+  { title: "GIT & GITHUB", skills: [
+    { id:"git1", name:"Core Git commands", desc:"clone, add, commit, push, pull, status, log" },
+    { id:"git2", name:"Branching & merging", desc:"Creating branches, merge, rebase basics, resolving conflicts" },
+    { id:"git3", name:"Pull requests & code review", desc:"Raising PRs, reviewing, commenting, approving" },
+    { id:"git4", name:"GitHub Actions / CI basics", desc:"Understanding pipelines, reading workflow YAML, triggering runs" },
+    { id:"git5", name:"Git for Ignition projects", desc:"Exporting Ignition projects to Git, diff strategies" },
+  ]},
+  { title: "DATABASE", skills: [
+    { id:"db1", name:"SQL fundamentals", desc:"SELECT, WHERE, JOIN, GROUP BY, basic CRUD" },
+    { id:"db2", name:"Stored procedures & views", desc:"Writing/calling stored procs, creating views" },
+    { id:"db3", name:"Database design", desc:"Schema design, normalisation, indexing basics" },
+    { id:"db4", name:"PostgreSQL / MySQL / MSSQL admin", desc:"User management, backups, performance basics" },
+    { id:"db5", name:"Time-series data handling", desc:"Historian queries, downsampling, trend data optimisation" },
+  ]},
+  { title: "UI / UX & FIGMA", skills: [
+    { id:"ux1", name:"Figma basics", desc:"Frames, components, constraints, auto-layout" },
+    { id:"ux2", name:"HMI / SCADA screen mockups", desc:"Wireframing process screens, navigation flows in Figma" },
+    { id:"ux3", name:"HMI design standards", desc:"ISA-101 awareness, colour standards, alarm state colours" },
+    { id:"ux4", name:"Responsive / multi-screen design", desc:"Designing for different panel sizes, mobile Perspective" },
+  ]},
+  { title: "MES & INTEGRATION", skills: [
+    { id:"mes1", name:"MES concepts & workflows", desc:"Work orders, production tracking, genealogy, OEE basics" },
+    { id:"mes2", name:"OPC-UA integration", desc:"Server/client config, browsing nodes, security certificates" },
+    { id:"mes3", name:"REST API design & consumption", desc:"Building or consuming REST endpoints, Postman, swagger" },
+    { id:"mes4", name:"ERP/MES–SCADA data flows", desc:"Understanding data handoff between SCADA and business systems" },
+  ]},
+  { title: "INFRASTRUCTURE & DEVOPS", skills: [
+    { id:"inf1", name:"Docker fundamentals", desc:"docker run, pull, images, containers, basic docker-compose" },
+    { id:"inf2", name:"Writing Dockerfiles", desc:"Building custom images, layers, environment variables" },
+    { id:"inf3", name:"Docker Compose", desc:"Multi-service compose files, networking, volumes" },
+    { id:"inf4", name:"Kubernetes basics", desc:"Pods, deployments, services — reading/understanding manifests" },
+    { id:"inf5", name:"Linux command line", desc:"Navigation, permissions, systemctl, journalctl, networking tools" },
+    { id:"inf6", name:"Ignition on Docker / K8s", desc:"Deploying Ignition gateway in containers, persistence, config" },
+  ]},
+];
+
+let saRatings = {};
+let saEvidence = {};
+const saTotalSkills = SA_DOMAINS.reduce((a, d) => a + d.skills.length, 0);
+
+function saUpdateProgress() {
+  const rated = Object.keys(saRatings).length;
+  const pct = Math.round(rated / saTotalSkills * 100);
+  document.getElementById('sa-rated').textContent = rated;
+  document.getElementById('sa-total').textContent = saTotalSkills;
+  document.getElementById('sa-pct').textContent = pct + '%';
+}
+
+function saSetRating(id, val) {
+  saRatings[id] = val;
+  document.querySelectorAll(`.sa-rb[data-id="${id}"]`).forEach(b => {
+    const bv = parseInt(b.dataset.val);
+    b.className = 'sa-rb' + (bv === val ? ` sa-s${val}` : '');
+  });
+  saUpdateProgress();
+}
+
+function saBuildForm() {
+  const body = document.getElementById('assessmentFormBody');
+  SA_DOMAINS.forEach(domain => {
+    const block = document.createElement('div');
+    block.className = 'sa-domain-block';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'sa-domain-header';
+    hdr.innerHTML = `<span>${domain.title}</span>`;
+    block.appendChild(hdr);
+
+    domain.skills.forEach(skill => {
+      const row = document.createElement('div');
+      row.className = 'sa-skill-row';
+      row.dataset.skillId = skill.id;
+      row.innerHTML = `
+        <div>
+          <div class="sa-skill-name">${skill.name}</div>
+          <div class="sa-skill-desc">${skill.desc}</div>
+        </div>
+        <div class="sa-rating-group">
+          ${[0,1,2,3,4].map(v => `<button class="sa-rb" data-id="${skill.id}" data-val="${v}" onclick="saSetRating('${skill.id}',${v})">${v}</button>`).join('')}
+        </div>
+        <div class="sa-skill-evidence">
+          <input type="text" placeholder="Where have you used this? (optional)" oninput="saEvidence['${skill.id}']=this.value">
+        </div>`;
+      block.appendChild(row);
+    });
+
+    body.appendChild(block);
+  });
+  saUpdateProgress();
+}
+
+function saScrollToFirst() {
+  const allIds = SA_DOMAINS.flatMap(d => d.skills.map(s => s.id));
+  const firstUnrated = allIds.find(id => saRatings[id] === undefined);
+  if (!firstUnrated) { showToast('All skills rated!', 'success'); return; }
+  const el = document.querySelector(`.sa-skill-row[data-skill-id="${firstUnrated}"]`);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function saSubmitForm() {
+  const name = document.getElementById('sa-name').value.trim();
+  if (!name) { showToast('Please enter your name before submitting.', 'error'); return; }
+
+  const btn = document.getElementById('sa-submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  const row = {
+    action: "skillAssessment",
+    name,
+    background: document.getElementById('sa-bg').value || '—',
+    experience: document.getElementById('sa-exp').value || '—',
+    submitted_at: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+  };
+
+  SA_DOMAINS.forEach(domain => {
+    domain.skills.forEach(skill => {
+      row[skill.id + '_rating'] = saRatings[skill.id] !== undefined ? saRatings[skill.id] : '—';
+      row[skill.id + '_evidence'] = saEvidence[skill.id] || '';
+    });
+  });
+
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(row),
+    });
+    btn.textContent = '✓ Submitted';
+    btn.style.background = '#059669';
+    showToast(`Thanks ${name}! Your assessment has been submitted.`, 'success');
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = 'Submit Assessment';
+    showToast('Submission failed. Please check your connection and try again.', 'error');
+  }
 }
 
 setInterval(loadSheetData, 30000);
