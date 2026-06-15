@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DG (CSI) – Leave Tracker</title>
+    <link rel="icon" type="image/jpeg" href="image/logo.jpg">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link rel="stylesheet" href="styles.css">
@@ -28,7 +29,7 @@
       <div class="nav-item active" onclick="switchView('overview', this)">Overview</div>
       <div class="nav-item" onclick="switchView('calendar', this)">Calendar</div>
       <div class="nav-item" onclick="switchView('summary', this)">Summary</div>
-      <div class="nav-item" onclick="switchView('assessment', this)">Skill Assessment</div>
+      <div class="nav-item" onclick="switchView('assessment', this)">Skill Matrix</div>
     </nav>
     <div class="page-wrap">
       <div class="page-header" id="memberFilterContainer" style="display:none">
@@ -190,7 +191,9 @@
         <div class="assessment-meta-section">
           <div class="assessment-field">
             <label>Professional Name</label>
-            <input type="text" id="sa-name" placeholder="e.g. JamesSaloman Joseph">
+            <select id="sa-name">
+              <option value="">Select...</option>
+            </select>
           </div>
           <div class="assessment-field">
             <label>Background</label>
@@ -247,6 +250,16 @@
             <div class="form-row">
               <label class="form-label">Select Date</label>
               <input type="date" class="form-input" id="leaveDate">
+            </div>
+
+            <!-- Duration: Full Day / Half Day -->
+            <div class="form-row">
+              <label class="form-label">Duration</label>
+              <div class="wfh-button-group">
+                <button type="button" class="wfh-btn selected" id="fullDayBtn" onclick="selectDuration(1)">Full Day</button>
+                <button type="button" class="wfh-btn" id="halfDayBtn" onclick="selectDuration(0.5)">Half Day</button>
+              </div>
+              <input type="hidden" id="durationValue" value="1">
             </div>
 
             <!-- Work From Home Buttons -->

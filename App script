@@ -60,7 +60,7 @@ function getLeaves() {
   const leaves = [];
 
   // Find column indices based on headers
-  let snCol = 0, nameCol = 1, idCol = 2, fromCol = 3, toCol = 4, reasonCol = 5, wfhCol = 6, tsCol = 7;
+  let snCol = 0, nameCol = 1, idCol = 2, fromCol = 3, toCol = 4, reasonCol = 5, wfhCol = 6, tsCol = 7, durationCol = 8;
 
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
@@ -73,7 +73,8 @@ function getLeaves() {
         end_leave: formatSheetDate(row[toCol]),
         reason: row[reasonCol] || "",
         wfh: (row[wfhCol] || "No").toString().trim(),
-        timestamp: row[tsCol] || ""
+        timestamp: row[tsCol] || "",
+        duration: parseFloat(row[durationCol]) === 0.5 ? 0.5 : 1
       });
     }
   }
@@ -188,14 +189,15 @@ function submitLeave(data) {
   const timestamp = new Date().toLocaleString();
 
   sheet.appendRow([
-    sn,
+    '',
     data.name,
-    data.id,
+    '',
     data.from_leave,
     data.end_leave,
     data.reason,
     data.wfh || "No",
-    timestamp
+    timestamp,
+    parseFloat(data.duration) === 0.5 ? 0.5 : 1
   ]);
 
   return ContentService.createTextOutput(JSON.stringify({
@@ -262,11 +264,29 @@ function submitSkillAssessment(data) {
     row.push(data[id + "_evidence"] || "");
   });
 
-  sheet.appendRow(row);
+  // Upsert by Name (column A): update the professional's existing row if present,
+  // otherwise append a new row.
+  const existing = sheet.getDataRange().getValues();
+  const targetName = (data.name || "").toString().trim().toLowerCase();
+  let updatedRow = 0;
+
+  for (let i = 1; i < existing.length; i++) {
+    const rowName = (existing[i][0] || "").toString().trim().toLowerCase();
+    if (rowName && rowName === targetName) {
+      // Sheet rows are 1-based; getRange row = i + 1
+      sheet.getRange(i + 1, 1, 1, row.length).setValues([row]);
+      updatedRow = i + 1;
+      break;
+    }
+  }
+
+  if (!updatedRow) {
+    sheet.appendRow(row);
+  }
 
   return ContentService.createTextOutput(JSON.stringify({
     status: "success",
-    message: "Assessment submitted"
+    message: updatedRow ? "Assessment updated" : "Assessment submitted"
   })).setMimeType(ContentService.MimeType.JSON);
 }
 

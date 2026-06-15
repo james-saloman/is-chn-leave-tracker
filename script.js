@@ -80,7 +80,8 @@ async function loadSheetData() {
             from: row.from_leave,
             to: row.end_leave,
             reason: row.reason || "",
-            wfh: (row.wfh || "No").toString()
+            wfh: (row.wfh || "No").toString(),
+            duration: parseFloat(row.duration) === 0.5 ? 0.5 : 1
           });
         }
       });
@@ -96,18 +97,25 @@ async function loadSheetData() {
   }
 }
 
+// Day count for a record, honoring a half-day (0.5) duration.
+// Half day only applies to single-day records; multi-day spans always count full days.
+function getLeaveSpan(l) {
+  const days = getDays(l.from, l.to);
+  return (days === 1 && parseFloat(l.duration) === 0.5) ? 0.5 : days;
+}
+
 // Count only non-WFH entries as leave days
 function getActualLeaveDays(leaves) {
   return leaves
     .filter(l => (l.wfh || "No") !== "Yes")
-    .reduce((a, l) => a + getDays(l.from, l.to), 0);
+    .reduce((a, l) => a + getLeaveSpan(l), 0);
 }
 
 // Count only WFH entries
 function getWFHDays(leaves) {
   return leaves
     .filter(l => (l.wfh || "No") === "Yes")
-    .reduce((a, l) => a + getDays(l.from, l.to), 0);
+    .reduce((a, l) => a + getLeaveSpan(l), 0);
 }
 
 function updateOverview() {
@@ -130,10 +138,14 @@ function updateOverview() {
       if (leaveEnd >= monthStart && leaveStart <= monthEnd && l.wfh !== "Yes") {
         const overlapStart = new Date(Math.max(leaveStart.getTime(), monthStart.getTime()));
         const overlapEnd = new Date(Math.min(leaveEnd.getTime(), monthEnd.getTime()));
-        totalLeaveDaysMonth += getDays(
+        const overlapDays = getDays(
           overlapStart.toISOString().split("T")[0],
           overlapEnd.toISOString().split("T")[0]
         );
+        // Apply half-day only to single-day records counted in full within the month
+        totalLeaveDaysMonth += (getDays(l.from, l.to) === 1 && parseFloat(l.duration) === 0.5)
+          ? 0.5
+          : overlapDays;
       }
     });
   });
@@ -431,10 +443,17 @@ function selectAbsenceType(type) {
   document.getElementById("wfhBtn").classList.toggle("selected", type === "wfh");
 }
 
+function selectDuration(value) {
+  document.getElementById("durationValue").value = value;
+  document.getElementById("fullDayBtn").classList.toggle("selected", value === 1);
+  document.getElementById("halfDayBtn").classList.toggle("selected", value === 0.5);
+}
+
 function submitLeave() {
   const date = document.getElementById("leaveDate").value;
   const reason = document.getElementById("leaveReason").value;
   const wfh = getWFHValue();
+  const duration = parseFloat(document.getElementById("durationValue").value) === 0.5 ? 0.5 : 1;
   const pin = getPin();
 
   if (!date) { showToast("Please select a date", "error"); return; }
@@ -455,7 +474,8 @@ function submitLeave() {
     from_leave: date,
     end_leave: date,
     reason: reason,
-    wfh: wfh === "Yes" ? "Yes" : "No"
+    wfh: wfh === "Yes" ? "Yes" : "No",
+    duration: duration
   };
 
   fetch(API_URL, {
@@ -468,9 +488,10 @@ function submitLeave() {
     document.getElementById("formSection").style.display = "none";
     document.getElementById("successSection").style.display = "block";
 
+    const durationText = duration === 0.5 ? "Half day" : "1 day";
     const label = wfh === "Yes"
-      ? `Work From Home on ${formatDate(date)} recorded (not counted as leave).`
-      : `1 day leave on ${formatDate(date)} recorded.`;
+      ? `Work From Home (${durationText}) on ${formatDate(date)} recorded (not counted as leave).`
+      : `${durationText} leave on ${formatDate(date)} recorded.`;
 
     document.getElementById("successText").textContent = label;
     loadSheetData();
@@ -532,6 +553,8 @@ function resetForm() {
   document.getElementById("pinError").style.display = "none";
   // Reset to Leave
   selectAbsenceType("leave");
+  // Reset to Full Day
+  selectDuration(1);
 }
 
 // Filter leaves by time period
@@ -604,9 +627,11 @@ function openDrawer(id) {
     html += `<div class="leave-list">`;
     filteredLeaves.forEach((l, idx) => {
       const isWFH = (l.wfh || "No") === "Yes";
+      const span = getLeaveSpan(l);
+      const spanLabel = span === 0.5 ? "Half day" : `${span} day(s)`;
       const daysLabel = isWFH
-        ? `<div class="leave-days" style="background:#dcfce7;color:#15803d">WFH</div>`
-        : `<div class="leave-days">${getDays(l.from, l.to)} day(s)</div>`;
+        ? `<div class="leave-days" style="background:#dcfce7;color:#15803d">WFH${span === 0.5 ? " · ½" : ""}</div>`
+        : `<div class="leave-days">${spanLabel}</div>`;
 
       const originalIdx = allLeaves.indexOf(l);
 
@@ -880,6 +905,7 @@ function switchView(view, el) {
     pageHeader.style.display = "flex";
   } else if (view === "summary") {
     summaryView.style.display = "block";
+    updateSummary();
   } else if (view === "assessment") {
     assessmentView.style.display = "block";
     if (!window._saBuilt) { saBuildForm(); window._saBuilt = true; }
@@ -890,16 +916,7 @@ function switchView(view, el) {
   if (el) el.classList.add("active");
 }
 
-function initSummaryDates() {
-  const today = new Date();
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-
-  document.getElementById("summaryStartDate").valueAsDate = firstDay;
-  document.getElementById("summaryEndDate").valueAsDate = lastDay;
-}
-
-function setFiscalYear() {
+function getFiscalYearRange() {
   const today = new Date();
   let fiscalStart, fiscalEnd;
 
@@ -913,6 +930,18 @@ function setFiscalYear() {
     fiscalEnd = new Date(today.getFullYear(), 8, 30);
   }
 
+  return { fiscalStart, fiscalEnd };
+}
+
+function initSummaryDates() {
+  // Default the Summary page to the current fiscal year
+  const { fiscalStart, fiscalEnd } = getFiscalYearRange();
+  document.getElementById("summaryStartDate").valueAsDate = fiscalStart;
+  document.getElementById("summaryEndDate").valueAsDate = fiscalEnd;
+}
+
+function setFiscalYear() {
+  const { fiscalStart, fiscalEnd } = getFiscalYearRange();
   document.getElementById("summaryStartDate").valueAsDate = fiscalStart;
   document.getElementById("summaryEndDate").valueAsDate = fiscalEnd;
   updateSummary();
@@ -972,7 +1001,11 @@ function calculateSummary(startDate, endDate) {
 
         const startStr = overlapStart.getFullYear() + "-" + String(overlapStart.getMonth() + 1).padStart(2, "0") + "-" + String(overlapStart.getDate()).padStart(2, "0");
         const endStr = overlapEnd.getFullYear() + "-" + String(overlapEnd.getMonth() + 1).padStart(2, "0") + "-" + String(overlapEnd.getDate()).padStart(2, "0");
-        const daysInRange = getDays(startStr, endStr);
+        let daysInRange = getDays(startStr, endStr);
+        // Half-day applies to single-day records counted in full within the range
+        if (getDays(l.from, l.to) === 1 && parseFloat(l.duration) === 0.5) {
+          daysInRange = 0.5;
+        }
 
         if (l.wfh === "Yes") {
           memberWFHDays += daysInRange;
@@ -1201,7 +1234,20 @@ function saSetRating(id, val) {
   saUpdateProgress();
 }
 
+function saPopulateNames() {
+  const select = document.getElementById('sa-name');
+  if (!select) return;
+  select.innerHTML = `<option value="">Select...</option>`;
+  MEMBERS.forEach(m => {
+    const option = document.createElement('option');
+    option.value = m.name;
+    option.textContent = m.name;
+    select.appendChild(option);
+  });
+}
+
 function saBuildForm() {
+  saPopulateNames();
   const body = document.getElementById('assessmentFormBody');
   SA_DOMAINS.forEach(domain => {
     const block = document.createElement('div');
