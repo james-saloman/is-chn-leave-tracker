@@ -33,6 +33,8 @@ function doPost(e) {
       return addMember(data);
     } else if (data.action === "deleteMember") {
       return deleteMember(data);
+    } else if (data.action === "deleteLeave") {
+      return deleteLeave(data);
     } else if (data.action === "skillAssessment") {
       return submitSkillAssessment(data);
     } else {
@@ -290,29 +292,33 @@ function submitSkillAssessment(data) {
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
-function deleteLeave(e) {
-  const { id, from_leave, end_leave, wfh } = e.parameter;
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Leaves");
-  
+function deleteLeave(data) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+
   if (!sheet) return ContentService.createTextOutput(JSON.stringify({
     status: "error",
-    message: "Sheet not found"
+    message: "Leave sheet not found"
   })).setMimeType(ContentService.MimeType.JSON);
 
-  const data = sheet.getDataRange().getValues();
-  const headers = data[0];
-  
-  // Find column indices
-  const idCol = headers.indexOf("Member ID") + 1;
-  const fromCol = headers.indexOf("From Date") + 1;
-  const endCol = headers.indexOf("End Date") + 1;
-  const wfhCol = headers.indexOf("WFH") + 1;
+  // Column positions match getLeaves()/submitLeave(): name=1, from=3, end=4, wfh=6
+  const nameCol = 1, fromCol = 3, toCol = 4, wfhCol = 6;
 
-  // Find and delete matching row
-  for (let i = data.length - 1; i > 0; i--) {
-    if (data[i][idCol - 1] == id && 
-        data[i][fromCol - 1] == from_leave && 
-        data[i][endCol - 1] == end_leave) {
+  const rows = sheet.getDataRange().getValues();
+  const targetName = (data.name || "").toString().trim().toLowerCase();
+  const targetWfh = (data.wfh || "No").toString().trim();
+
+  // Search bottom-up so the row index stays valid after deletion.
+  for (let i = rows.length - 1; i > 0; i--) {
+    const row = rows[i];
+    const rowName = (row[nameCol] || "").toString().trim().toLowerCase();
+    const rowFrom = formatSheetDate(row[fromCol]);
+    const rowTo = formatSheetDate(row[toCol]);
+    const rowWfh = (row[wfhCol] || "No").toString().trim();
+
+    if (rowName === targetName &&
+        rowFrom === data.from_leave &&
+        rowTo === data.end_leave &&
+        rowWfh === targetWfh) {
       sheet.deleteRow(i + 1);
       return ContentService.createTextOutput(JSON.stringify({
         status: "success",

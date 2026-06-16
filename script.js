@@ -703,7 +703,7 @@ function confirmDeleteWithPin() {
   if (!window.deleteContext) return;
 
   const enteredPin = document.getElementById("deletePinInput").value;
-  const { memberId, leaveIndex, leave, member } = window.deleteContext;
+  const { memberId, leave, member } = window.deleteContext;
 
   if (enteredPin !== member.pin) {
     document.getElementById("deletePinError").style.display = "block";
@@ -716,6 +716,7 @@ function confirmDeleteWithPin() {
   const payload = {
     action: "deleteLeave",
     id: memberId,
+    name: member.name,
     from_leave: leave.from,
     end_leave: leave.to,
     wfh: leave.wfh
@@ -728,11 +729,8 @@ function confirmDeleteWithPin() {
     body: JSON.stringify(payload)
   })
   .then(() => {
-    leaveData[memberId] = leaves.filter((l, idx) => {
-      const originalIndex = leaves.length - 1 - idx;
-      const reversedIndex = leaveIndex;
-      return originalIndex !== reversedIndex;
-    });
+    // Remove the exact record by reference (robust against duplicate rows).
+    leaveData[memberId] = leaves.filter(l => l !== leave);
     showToast("Leave record deleted successfully");
     closeDeleteConfirmModal();
     openDrawer(memberId);
