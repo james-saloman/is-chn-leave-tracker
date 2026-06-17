@@ -319,7 +319,9 @@ function renderCalendar() {
     let badgesHtml = "";
     absences.forEach(a => {
       const badgeType = a.wfh === "Yes" ? "wfh" : "leave";
-      badgesHtml += `<div class="calendar-badge ${badgeType}" title="${a.name}">${a.shortName}</div>`;
+      const parts = (a.name || "").trim().split(/\s+/).filter(Boolean);
+      const label = parts.length > 1 ? `${parts[0]} ${parts[1][0]}` : (parts[0] || a.name);
+      badgesHtml += `<div class="calendar-badge ${badgeType}" title="${a.name}">${label}</div>`;
     });
 
     dayEl.innerHTML = `

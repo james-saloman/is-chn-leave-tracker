@@ -471,11 +471,13 @@ nav {
   font-size: 9px;
   padding: 2px 5px;
   border-radius: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
   font-weight: 600;
-  display: inline-block;
+  line-height: 1.2;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
   margin-bottom: 1px;
 }
 
