@@ -219,7 +219,9 @@ function updateTeamUtilization() {
     if (hasWFHThisMonth && !hasLeaveThisMonth) stats.wfh++;
   });
 
-  const activeToday = MEMBERS.length - document.querySelectorAll("#overviewTodayStatus [style*='dc2626']").length;
+  const todayStr = today.toISOString().split("T")[0];
+  const membersOnLeaveToday = getAbsencesForDate(todayStr).filter(a => a.wfh !== "Yes").length;
+  const activeToday = MEMBERS.length - membersOnLeaveToday;
   const html = `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
       <span style="font-size:12px;color:var(--muted)">Team attendance</span>
