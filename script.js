@@ -22,7 +22,31 @@ let currentCalendarDate = new Date();
 let activeFilter = "all";
 let currentView = "calendar";
 
+// Tracks when the overlay first appeared so we can enforce a minimum display time.
+const LOADER_START = Date.now();
+const LOADER_MIN_MS = 800;
+let loaderHidden = false;
+
+// Hide the loading overlay once the initial data fetch is done.
+// Keeps the overlay up for at least LOADER_MIN_MS so it doesn't flash on fast loads.
+function hideLoadingOverlay() {
+  if (loaderHidden) return;
+  loaderHidden = true;
+  const elapsed = Date.now() - LOADER_START;
+  const wait = Math.max(0, LOADER_MIN_MS - elapsed);
+  setTimeout(() => {
+    const overlay = document.getElementById("loadingOverlay");
+    if (overlay) {
+      overlay.classList.add("hidden");
+      setTimeout(() => overlay.remove(), 400);
+    }
+  }, wait);
+}
+
 document.addEventListener("DOMContentLoaded", async function() {
+  // Safety net: never let the overlay hang if the fetch never resolves.
+  setTimeout(hideLoadingOverlay, 10000);
+
   // Close modals on Escape
   document.addEventListener("keydown", function(e) {
     if (e.key === "Escape") {
@@ -94,6 +118,9 @@ async function loadSheetData() {
     console.error("Error loading data:", err);
     renderCalendar();
     updateOverview();
+  } finally {
+    // Hide the loading overlay only after the initial fetch resolves (success or error).
+    hideLoadingOverlay();
   }
 }
 
