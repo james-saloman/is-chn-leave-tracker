@@ -291,7 +291,7 @@ function updateOverviewMemberCards() {
         <div style="font-size:11px;color:var(--muted);margin-bottom:0.5rem">${m.role}</div>
         <div style="margin-bottom:8px">${statusBadge}</div>
         <div style="font-size:11px;color:var(--muted);display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
-          <span><strong style="color:var(--accent)">${total}</strong> leave</span>
+          <span><strong style="color:var(--accent)">${total}</strong> PTO</span>
           ${wfh > 0 ? `<span>|  <strong style="color:#15803d">${wfh}</strong> WFH</span>` : ''}
         </div>
       </div>
@@ -343,12 +343,28 @@ function renderCalendar() {
     if (dateStr === today) dayEl.classList.add("today");
     if (absences.length > 0) dayEl.classList.add("has-leave");
 
-    let badgesHtml = "";
+    // Group a day's absences by member so a person who is half WFH + half Leave
+    // shows as a single split badge instead of two separate badges.
+    const byMember = {};
     absences.forEach(a => {
-      const badgeType = a.wfh === "Yes" ? "wfh" : "leave";
-      const parts = (a.name || "").trim().split(/\s+/).filter(Boolean);
-      const label = parts.length > 1 ? `${parts[0]} ${parts[1][0]}` : (parts[0] || a.name);
-      badgesHtml += `<div class="calendar-badge ${badgeType}" title="${a.name}">${label}</div>`;
+      if (!byMember[a.id]) byMember[a.id] = { name: a.name, hasWFH: false, hasLeave: false, isHalf: false };
+      if (a.wfh === "Yes") byMember[a.id].hasWFH = true;
+      else byMember[a.id].hasLeave = true;
+      if (getLeaveSpan(a) === 0.5) byMember[a.id].isHalf = true;
+    });
+
+    let badgesHtml = "";
+    Object.values(byMember).forEach(g => {
+      const parts = (g.name || "").trim().split(/\s+/).filter(Boolean);
+      const label = parts.length > 1 ? `${parts[0]} ${parts[1][0]}` : (parts[0] || g.name);
+      let badgeClass = "calendar-badge ";
+      if (g.hasWFH && g.hasLeave) badgeClass += "split";
+      else badgeClass += g.hasWFH ? "wfh" : "leave";
+      // A split badge (half WFH + half Leave) already conveys the half-day nature;
+      // for a plain half-day Leave/WFH, render the badge color filled only halfway.
+      if (g.isHalf && !(g.hasWFH && g.hasLeave)) badgeClass += " half";
+      const titleSuffix = g.isHalf ? " (Half day)" : "";
+      badgesHtml += `<div class="${badgeClass}" title="${g.name}${titleSuffix}">${label}</div>`;
     });
 
     dayEl.innerHTML = `
@@ -413,11 +429,7 @@ function showAbsencesForDate(dateStr) {
     absences.forEach(a => {
       const isWFH = a.wfh === "Yes";
       const span = getLeaveSpan(a);
-      const badgeStyle = isWFH ? "background:rgba(59,130,246,0.15);color:#3b82f6" : "background:rgba(239,68,68,0.15);color:#ef4444";
-      const halfLabel = span === 0.5 ? " · ½" : "";
-      const daysLabel = isWFH
-        ? `<div class="leave-days" style="${badgeStyle}">WFH${halfLabel}</div>`
-        : `<div class="leave-days" style="${badgeStyle}">PTO${halfLabel}</div>`;
+      const halfBubble = span === 0.5 ? `<span class="half-day-bubble ${isWFH ? 'wfh-yes' : 'wfh-no'}">Half Day</span>` : "";
       const reversedLeaves = [...(leaveData[a.id] || [])].reverse();
       const originalIdx = reversedLeaves.indexOf(a.leaveRef);
       html += `
@@ -425,12 +437,14 @@ function showAbsencesForDate(dateStr) {
           <button class="btn-delete-leave" onclick="deleteLeave('${a.id}', ${originalIdx}, this)" title="Delete record"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
           <div class="leave-row-top">
             <div class="leave-dates">${a.name}</div>
-            ${daysLabel}
           </div>
           <div class="leave-reason-text">${a.reason || "No reason provided"}</div>
-          <span class="wfh-badge ${isWFH ? 'wfh-yes' : 'wfh-no'}">
-            ${isWFH ? '🏠 Work From Home' : '🏢 Leave'}
-          </span>
+          <div class="leave-label-row">
+            <span class="wfh-badge ${isWFH ? 'wfh-yes' : 'wfh-no'}">
+              ${isWFH ? '🏠 Work From Home' : '🏢 Leave'}
+            </span>
+            ${halfBubble}
+          </div>
         </div>
       `;
     });
@@ -650,8 +664,8 @@ function openDrawer(id) {
         <div class="drawer-name">${m.name}</div>
         <div class="drawer-role">${m.role}</div>
         <div style="display:flex;gap:8px;margin-top:6px">
-          <span style="font-size:11px;background:#fef3c7;color:#b45309;padding:3px 8px;border-radius:20px;font-weight:500">${total} Leave</span>
-          ${wfh > 0 ? `<span style="font-size:11px;background:#dcfce7;color:#15803d;padding:3px 8px;border-radius:20px;font-weight:500">${wfh} WFH</span>` : ''}
+          <span style="font-size:11px;background:#fee2e2;color:#dc2626;padding:3px 8px;border-radius:20px;font-weight:500">${total} PTO</span>
+          ${wfh > 0 ? `<span style="font-size:11px;background:rgba(59,130,246,0.15);color:#3b82f6;padding:3px 8px;border-radius:20px;font-weight:500">${wfh} WFH</span>` : ''}
         </div>
       </div>
     </div>
@@ -672,11 +686,7 @@ function openDrawer(id) {
     filteredLeaves.forEach((l, idx) => {
       const isWFH = (l.wfh || "No") === "Yes";
       const span = getLeaveSpan(l);
-      const spanLabel = span === 0.5 ? "Half day" : `${span} day(s)`;
-      const badgeStyle = isWFH ? "background:rgba(59,130,246,0.15);color:#3b82f6" : "background:rgba(239,68,68,0.15);color:#ef4444";
-      const daysLabel = isWFH
-        ? `<div class="leave-days" style="${badgeStyle}">WFH${span === 0.5 ? " · ½" : ""}</div>`
-        : `<div class="leave-days" style="${badgeStyle}">PTO${span === 0.5 ? " · ½" : ` · ${spanLabel}`}</div>`;
+      const halfBubble = span === 0.5 ? `<span class="half-day-bubble ${isWFH ? 'wfh-yes' : 'wfh-no'}">Half Day</span>` : "";
 
       const originalIdx = allLeaves.indexOf(l);
 
@@ -685,12 +695,14 @@ function openDrawer(id) {
           <button class="btn-delete-leave" onclick="deleteLeave('${m.id}', ${originalIdx}, this)" title="Delete record"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
           <div class="leave-row-top">
             <div class="leave-dates">${formatDate(l.from)}</div>
-            ${daysLabel}
           </div>
           <div class="leave-reason-text">${l.reason || "No reason provided"}</div>
-          <span class="wfh-badge ${isWFH ? 'wfh-yes' : 'wfh-no'}">
-            ${isWFH ? '🏠 Work From Home' : '🏢 Leave'}
-          </span>
+          <div class="leave-label-row">
+            <span class="wfh-badge ${isWFH ? 'wfh-yes' : 'wfh-no'}">
+              ${isWFH ? '🏠 Work From Home' : '🏢 Leave'}
+            </span>
+            ${halfBubble}
+          </div>
         </div>
       `;
     });
@@ -1202,6 +1214,68 @@ function downloadSummaryPDF() {
   };
 
   html2pdf().set(opt).from(element).save();
+}
+
+function toggleDropdownMenu(e, menuId) {
+  e.stopPropagation();
+  const menu = document.getElementById(menuId);
+  // Close any other open dropdown menus first.
+  document.querySelectorAll(".download-menu.show").forEach(m => {
+    if (m !== menu) m.classList.remove("show");
+  });
+  const isOpen = menu.classList.toggle("show");
+  // Close on the next outside click while the menu is open.
+  if (isOpen) {
+    document.addEventListener("click", () => closeDropdownMenu(menuId), { once: true });
+  }
+}
+
+function closeDropdownMenu(menuId) {
+  document.getElementById(menuId).classList.remove("show");
+}
+
+function downloadSummaryExcel() {
+  const startStr = document.getElementById("summaryStartDate").value;
+  const endStr = document.getElementById("summaryEndDate").value;
+
+  if (!startStr || !endStr) {
+    showToast("Please select both start and end dates", "error");
+    return;
+  }
+
+  if (typeof XLSX === "undefined") {
+    showToast("Excel library not loaded", "error");
+    return;
+  }
+
+  const summaryData = calculateSummary(new Date(startStr), new Date(endStr));
+
+  // Build worksheet rows: title block, totals, then the per-member table.
+  const rows = [
+    ["BW DESIGN GROUP – Leave Report"],
+    [`Period: ${formatDate(startStr)} to ${formatDate(endStr)}`],
+    [],
+    ["Total PTO Days", summaryData.totalLeaveDays],
+    ["Total WFH Days", summaryData.totalWFHDays],
+    ["Team Members", summaryData.members.length],
+    [],
+    ["Professional Name", "Professional ID", "PTO Days", "WFH Days", "Total Absences"]
+  ];
+
+  if (summaryData.members.length === 0) {
+    rows.push(["No absences found in the selected date range"]);
+  } else {
+    summaryData.members.forEach(m => {
+      rows.push([m.name, m.id, m.leaveDays, m.wfhDays, m.totalDays]);
+    });
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"] = [{ wch: 28 }, { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 16 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Leave Report");
+  XLSX.writeFile(wb, `leave-report-${startStr}-to-${endStr}.xlsx`);
 }
 
 // ── SKILL ASSESSMENT ────────────────────────────────────────────────────────

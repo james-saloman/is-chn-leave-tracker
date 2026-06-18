@@ -7,6 +7,7 @@
     <link rel="icon" type="image/jpeg" href="image/logo.jpg">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
@@ -130,30 +131,40 @@
           <div class="date-range-group">
             <div>
               <label for="summaryStartDate">From Date</label>
-              <input type="date" id="summaryStartDate">
+              <input type="date" id="summaryStartDate" onchange="updateSummary()">
             </div>
             <div>
               <label for="summaryEndDate">To Date</label>
-              <input type="date" id="summaryEndDate">
+              <input type="date" id="summaryEndDate" onchange="updateSummary()">
             </div>
-            <button class="btn-apply-range" onclick="updateSummary()">Apply</button>
           </div>
           <div class="date-range-group" style="gap:8px;">
-            <button class="btn-apply-range" onclick="setFiscalYear()" style="background:#6366f1;">Fiscal Year</button>
-            <button class="btn-apply-range" onclick="setCalendarYear()" style="background:#8b5cf6;">Calendar Year</button>
-            <button class="btn-apply-range" onclick="downloadSummaryPDF()" style="background:#059669;"> Download PDF</button>
+            <div class="download-dropdown">
+              <button class="btn-apply-range" onclick="toggleDropdownMenu(event, 'yearMenu')" style="background:#6366f1;">📅 Year ▾</button>
+              <div class="download-menu" id="yearMenu">
+                <button onclick="setFiscalYear(); closeDropdownMenu('yearMenu')">Fiscal Year</button>
+                <button onclick="setCalendarYear(); closeDropdownMenu('yearMenu')">Calendar Year</button>
+              </div>
+            </div>
+            <div class="download-dropdown">
+              <button class="btn-apply-range" onclick="toggleDropdownMenu(event, 'downloadMenu')" style="background:#059669;">Download ▾</button>
+              <div class="download-menu" id="downloadMenu">
+                <button onclick="downloadSummaryPDF(); closeDropdownMenu('downloadMenu')">PDF</button>
+                <button onclick="downloadSummaryExcel(); closeDropdownMenu('downloadMenu')">Excel</button>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-label">Total Leave Days</div>
-            <div class="stat-value" id="totalLeaveDays">0</div>
+            <div class="stat-value" id="totalLeaveDays" style="color:#dc2626">0</div>
             <div class="stat-desc">Across all team members</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Total WFH Days</div>
-            <div class="stat-value" id="totalWFHDays">0</div>
+            <div class="stat-value" id="totalWFHDays" style="color:#3b82f6">0</div>
             <div class="stat-desc">Work from home records</div>
           </div>
           <div class="stat-card">

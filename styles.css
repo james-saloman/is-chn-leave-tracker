@@ -303,8 +303,8 @@ nav {
 }
 
 .wfh-count {
-  background: #dcfce7;
-  color: #15803d;
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 12px;
@@ -313,13 +313,52 @@ nav {
 }
 
 .leave-count-badge {
-  background: #fef3c7;
-  color: #b45309;
+  background: #fee2e2;
+  color: #dc2626;
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
   display: inline-block;
+}
+
+.download-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.download-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  z-index: 50;
+  min-width: 130px;
+}
+
+.download-menu.show {
+  display: block;
+}
+
+.download-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.download-menu button:hover {
+  background: #f1f5f9;
 }
 
 .no-data-msg {
@@ -488,6 +527,24 @@ nav {
 
 .calendar-badge.wfh {
   background: #3b82f6;
+  color: #fff;
+}
+
+/* Half Leave + half WFH on the same day: split red/blue. */
+.calendar-badge.split {
+  background: linear-gradient(90deg, #ef4444 50%, #3b82f6 50%);
+  color: #fff;
+}
+
+/* Half-day Leave/WFH: fill the left half solid, the right half a faded tint
+   of the same color so white text stays readable across the whole badge. */
+.calendar-badge.leave.half {
+  background: linear-gradient(90deg, #ef4444 50%, rgba(239, 68, 68, 0.05) 50%);
+  color: #fff;
+}
+
+.calendar-badge.wfh.half {
+  background: linear-gradient(90deg, #3b82f6 50%, rgba(59, 130, 246, 0.05) 50%);
   color: #fff;
 }
 
@@ -1300,6 +1357,24 @@ nav {
 .wfh-no {
   background: #fee2e2;
   color: #dc2626;
+}
+
+.leave-label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.leave-label-row .wfh-badge {
+  margin-top: 0;
+}
+
+.half-day-bubble {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 20px;
 }
 
 .no-leaves {
