@@ -1248,8 +1248,8 @@ nav {
   border-radius: 20px;
   font-weight: 500;
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 12px;
+  right: 12px;
 }
 
 .leave-reason-text {
@@ -1258,22 +1258,28 @@ nav {
 }
 
 .btn-delete-leave {
-  background: #dc2626;
-  color: #fff;
+  background: transparent;
+  color: #dc2626;
   border: none;
   border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 500;
+  padding: 6px;
   cursor: pointer;
   position: absolute;
   bottom: 8px;
   right: 8px;
-  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.btn-delete-leave svg {
+  width: 16px;
+  height: 16px;
 }
 
 .btn-delete-leave:hover {
-  background: #b91c1c;
+  background: rgba(220, 38, 38, 0.12);
 }
 
 /* ===== WFH BADGES ===== */
@@ -1287,8 +1293,8 @@ nav {
 }
 
 .wfh-yes {
-  background: #dcfce7;
-  color: #15803d;
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
 }
 
 .wfh-no {

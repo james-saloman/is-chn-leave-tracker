@@ -384,7 +384,9 @@ function getAbsencesForDate(dateStr) {
           wfh: l.wfh || "No",
           reason: l.reason || "",
           from: l.from,
-          to: l.to
+          to: l.to,
+          duration: l.duration,
+          leaveRef: l
         });
       }
     });
@@ -394,6 +396,7 @@ function getAbsencesForDate(dateStr) {
 }
 
 function showAbsencesForDate(dateStr) {
+  window.activeCalendarDate = dateStr;
   const absences = getAbsencesForDate(dateStr);
   const dateObj = new Date(dateStr);
   const dateDisplay = dateObj.toLocaleDateString("en-GB", {day: "2-digit", month: "short", year: "numeric"});
@@ -408,17 +411,26 @@ function showAbsencesForDate(dateStr) {
   } else {
     html += `<div class="leave-list">`;
     absences.forEach(a => {
-      const member = MEMBERS.find(m => m.id === a.id);
       const isWFH = a.wfh === "Yes";
+      const span = getLeaveSpan(a);
+      const badgeStyle = isWFH ? "background:rgba(59,130,246,0.15);color:#3b82f6" : "background:rgba(239,68,68,0.15);color:#ef4444";
+      const halfLabel = span === 0.5 ? " · ½" : "";
+      const daysLabel = isWFH
+        ? `<div class="leave-days" style="${badgeStyle}">WFH${halfLabel}</div>`
+        : `<div class="leave-days" style="${badgeStyle}">PTO${halfLabel}</div>`;
+      const reversedLeaves = [...(leaveData[a.id] || [])].reverse();
+      const originalIdx = reversedLeaves.indexOf(a.leaveRef);
       html += `
         <div class="leave-row">
+          <button class="btn-delete-leave" onclick="deleteLeave('${a.id}', ${originalIdx}, this)" title="Delete record"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
           <div class="leave-row-top">
             <div class="leave-dates">${a.name}</div>
-            <div class="leave-days" style="${isWFH ? "background:#dcfce7;color:#15803d" : "background:#fef3c7;color:#b45309"}">
-              ${isWFH ? "WFH" : "Leave"}
-            </div>
+            ${daysLabel}
           </div>
           <div class="leave-reason-text">${a.reason || "No reason provided"}</div>
+          <span class="wfh-badge ${isWFH ? 'wfh-yes' : 'wfh-no'}">
+            ${isWFH ? '🏠 Work From Home' : '🏢 Leave'}
+          </span>
         </div>
       `;
     });
@@ -623,6 +635,7 @@ function filterLeavesByPeriod(leaves, period) {
 
 // DRAWER
 function openDrawer(id) {
+  window.activeCalendarDate = null;
   const m = MEMBERS.find(x => x.id === id);
   const allLeaves = [...leaveData[id]].reverse();
   const total = getActualLeaveDays(leaveData[id]);
@@ -660,15 +673,16 @@ function openDrawer(id) {
       const isWFH = (l.wfh || "No") === "Yes";
       const span = getLeaveSpan(l);
       const spanLabel = span === 0.5 ? "Half day" : `${span} day(s)`;
+      const badgeStyle = isWFH ? "background:rgba(59,130,246,0.15);color:#3b82f6" : "background:rgba(239,68,68,0.15);color:#ef4444";
       const daysLabel = isWFH
-        ? `<div class="leave-days" style="background:#dcfce7;color:#15803d">WFH${span === 0.5 ? " · ½" : ""}</div>`
-        : `<div class="leave-days">${spanLabel}</div>`;
+        ? `<div class="leave-days" style="${badgeStyle}">WFH${span === 0.5 ? " · ½" : ""}</div>`
+        : `<div class="leave-days" style="${badgeStyle}">PTO${span === 0.5 ? " · ½" : ` · ${spanLabel}`}</div>`;
 
       const originalIdx = allLeaves.indexOf(l);
 
       html += `
         <div class="leave-row">
-          <button class="btn-delete-leave" onclick="deleteLeave('${m.id}', ${originalIdx}, this)" title="Delete record">Delete</button>
+          <button class="btn-delete-leave" onclick="deleteLeave('${m.id}', ${originalIdx}, this)" title="Delete record"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
           <div class="leave-row-top">
             <div class="leave-dates">${formatDate(l.from)}</div>
             ${daysLabel}
@@ -764,7 +778,13 @@ function confirmDeleteWithPin() {
     leaveData[memberId] = leaves.filter(l => l !== leave);
     showToast("Leave record deleted successfully");
     closeDeleteConfirmModal();
-    openDrawer(memberId);
+    const calDate = window.activeCalendarDate;
+    if (calDate) {
+      renderCalendar();
+      showAbsencesForDate(calDate);
+    } else {
+      openDrawer(memberId);
+    }
     loadSheetData();
   })
   .catch(() => {
