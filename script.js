@@ -43,6 +43,20 @@ function hideLoadingOverlay() {
   }, wait);
 }
 
+// Show the loading overlay again (e.g. before a reload). Recreates it if the
+// initial overlay was already removed from the DOM after first load.
+function showLoadingOverlay() {
+  let overlay = document.getElementById("loadingOverlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "loadingOverlay";
+    overlay.className = "loading-overlay";
+    overlay.innerHTML = '<div class="loading-spinner"></div><div class="loading-text">Loading team data…</div>';
+    document.body.appendChild(overlay);
+  }
+  overlay.classList.remove("hidden");
+}
+
 document.addEventListener("DOMContentLoaded", async function() {
   // Safety net: never let the overlay hang if the fetch never resolves.
   setTimeout(hideLoadingOverlay, 10000);
@@ -97,17 +111,31 @@ async function loadSheetData() {
 
     MEMBERS.forEach(m => leaveData[m.id] = []);
 
+    // Leave rows link to members by ID (sheet column C), but that column is
+    // often blank — in which case we fall back to matching by Name. This keeps
+    // history attached even after a member's ID is edited.
+    const nameToId = {};
+    MEMBERS.forEach(m => { nameToId[(m.name || "").trim().toLowerCase()] = m.id; });
+
     if (json.status === "success" && json.data) {
       json.data.forEach(row => {
+        if (!row.from_leave || !row.end_leave) return;
+
+        let memberId = null;
         if (row.id && leaveData[row.id]) {
-          leaveData[row.id].push({
-            from: row.from_leave,
-            to: row.end_leave,
-            reason: row.reason || "",
-            wfh: (row.wfh || "No").toString(),
-            duration: parseFloat(row.duration) === 0.5 ? 0.5 : 1
-          });
+          memberId = row.id;
+        } else if (row.name) {
+          memberId = nameToId[row.name.trim().toLowerCase()] || null;
         }
+        if (!memberId || !leaveData[memberId]) return;
+
+        leaveData[memberId].push({
+          from: row.from_leave,
+          to: row.end_leave,
+          reason: row.reason || "",
+          wfh: (row.wfh || "No").toString(),
+          duration: parseFloat(row.duration) === 0.5 ? 0.5 : 1
+        });
       });
     }
 
@@ -131,11 +159,31 @@ function getLeaveSpan(l) {
   return (days === 1 && parseFloat(l.duration) === 0.5) ? 0.5 : days;
 }
 
-// Count only non-WFH entries as leave days
+// A half-day WFH implies the OTHER half of that day is leave — unless an actual
+// half-day leave record already exists for the same day (then it's not implied).
+// The reverse does not apply: a half-day leave alone does NOT imply WFH.
+function impliesHalfLeave(l, allLeaves) {
+  if ((l.wfh || "No") !== "Yes") return false;
+  if (getLeaveSpan(l) !== 0.5) return false;
+  const hasHalfLeaveSameDay = allLeaves.some(o =>
+    o !== l &&
+    (o.wfh || "No") !== "Yes" &&
+    o.from === l.from &&
+    getLeaveSpan(o) === 0.5
+  );
+  return !hasHalfLeaveSameDay;
+}
+
+// Count non-WFH entries as leave days, plus the implied other-half of any
+// lone half-day WFH (see impliesHalfLeave).
 function getActualLeaveDays(leaves) {
-  return leaves
+  const explicit = leaves
     .filter(l => (l.wfh || "No") !== "Yes")
     .reduce((a, l) => a + getLeaveSpan(l), 0);
+  const implied = leaves
+    .filter(l => impliesHalfLeave(l, leaves))
+    .reduce((a) => a + 0.5, 0);
+  return explicit + implied;
 }
 
 // Count only WFH entries
@@ -162,7 +210,8 @@ function updateOverview() {
     leaves.forEach(l => {
       const leaveStart = new Date(l.from);
       const leaveEnd = new Date(l.to);
-      if (leaveEnd >= monthStart && leaveStart <= monthEnd && l.wfh !== "Yes") {
+      const inMonth = leaveEnd >= monthStart && leaveStart <= monthEnd;
+      if (inMonth && l.wfh !== "Yes") {
         const overlapStart = new Date(Math.max(leaveStart.getTime(), monthStart.getTime()));
         const overlapEnd = new Date(Math.min(leaveEnd.getTime(), monthEnd.getTime()));
         const overlapDays = getDays(
@@ -173,6 +222,9 @@ function updateOverview() {
         totalLeaveDaysMonth += (getDays(l.from, l.to) === 1 && parseFloat(l.duration) === 0.5)
           ? 0.5
           : overlapDays;
+      } else if (inMonth && impliesHalfLeave(l, leaves)) {
+        // Lone half-day WFH: the other half counts as leave.
+        totalLeaveDaysMonth += 0.5;
       }
     });
   });
@@ -199,7 +251,11 @@ function updateTodayStatus(absences, today) {
   if (absences.length === 0) {
     container.innerHTML = `<div style="padding:12px;background:#dcfce7;border-radius:8px;border-left:3px solid #15803d;font-size:13px;color:#15803d">✓ Full team present</div>`;
   } else {
-    const leaveMembers = absences.filter(a => a.wfh !== "Yes");
+    // A lone half-day WFH implies the other half is leave, so such members
+    // appear in BOTH the On Leave and WFH lists.
+    const leaveMembers = absences.filter(a =>
+      a.wfh !== "Yes" || (a.leaveRef && impliesHalfLeave(a.leaveRef, leaveData[a.id] || []))
+    );
     const wfhMembers = absences.filter(a => a.wfh === "Yes");
     let html = "";
     if (leaveMembers.length > 0) {
@@ -298,7 +354,15 @@ function updateOverviewMemberCards() {
     `;
   }).join("");
 
-  container.innerHTML = html;
+  // "Add Professional" card — sits at the end of the grid as a plus tile.
+  const addCard = `
+    <div class="add-member-card" onclick="openAddMemberModal()" title="Add Professional">
+      <div class="add-member-plus">+</div>
+      <div class="add-member-label">Add Professional</div>
+    </div>
+  `;
+
+  container.innerHTML = html + addCard;
 }
 
 function renderCalendar() {
@@ -351,6 +415,10 @@ function renderCalendar() {
       if (a.wfh === "Yes") byMember[a.id].hasWFH = true;
       else byMember[a.id].hasLeave = true;
       if (getLeaveSpan(a) === 0.5) byMember[a.id].isHalf = true;
+      // A lone half-day WFH implies the other half is leave → show as split.
+      if (a.leaveRef && impliesHalfLeave(a.leaveRef, leaveData[a.id] || [])) {
+        byMember[a.id].hasLeave = true;
+      }
     });
 
     let badgesHtml = "";
@@ -425,25 +493,47 @@ function showAbsencesForDate(dateStr) {
   if (absences.length === 0) {
     html += `<div class="no-leaves">No absences on this date</div>`;
   } else {
-    html += `<div class="leave-list">`;
+    // Group a day's absences by member so a person who is e.g. half Leave +
+    // half WFH on the same day appears in a single card with both badges.
+    const grouped = [];
+    const byId = {};
     absences.forEach(a => {
-      const isWFH = a.wfh === "Yes";
-      const span = getLeaveSpan(a);
-      const halfBubble = span === 0.5 ? `<span class="half-day-bubble ${isWFH ? 'wfh-yes' : 'wfh-no'}">Half Day</span>` : "";
-      const reversedLeaves = [...(leaveData[a.id] || [])].reverse();
-      const originalIdx = reversedLeaves.indexOf(a.leaveRef);
-      html += `
-        <div class="leave-row">
-          <button class="btn-delete-leave" onclick="deleteLeave('${a.id}', ${originalIdx}, this)" title="Delete record"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
-          <div class="leave-row-top">
-            <div class="leave-dates">${a.name}</div>
-          </div>
-          <div class="leave-reason-text">${a.reason || "No reason provided"}</div>
-          <div class="leave-label-row">
+      if (!byId[a.id]) {
+        byId[a.id] = { id: a.id, name: a.name, records: [] };
+        grouped.push(byId[a.id]);
+      }
+      byId[a.id].records.push(a);
+    });
+
+    html += `<div class="leave-list">`;
+    grouped.forEach(g => {
+      const reversedLeaves = [...(leaveData[g.id] || [])].reverse();
+      const reason = g.records.map(r => r.reason).find(r => r) || "No reason provided";
+
+      const badges = g.records.map(a => {
+        const isWFH = a.wfh === "Yes";
+        const span = getLeaveSpan(a);
+        const halfBubble = span === 0.5 ? `<span class="half-day-bubble ${isWFH ? 'wfh-yes' : 'wfh-no'}">Half Day</span>` : "";
+        const originalIdx = reversedLeaves.indexOf(a.leaveRef);
+        return `
+          <span class="day-leave-item">
             <span class="wfh-badge ${isWFH ? 'wfh-yes' : 'wfh-no'}">
               ${isWFH ? '🏠 Work From Home' : '🏢 Leave'}
             </span>
             ${halfBubble}
+            <button class="btn-delete-leave-inline" onclick="deleteLeave('${g.id}', ${originalIdx}, this)" title="Delete record"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
+          </span>
+        `;
+      }).join("");
+
+      html += `
+        <div class="leave-row">
+          <div class="leave-row-top">
+            <div class="leave-dates">${g.name}</div>
+          </div>
+          <div class="leave-reason-text">${reason}</div>
+          <div class="leave-label-row">
+            ${badges}
           </div>
         </div>
       `;
@@ -562,13 +652,15 @@ function submitLeave() {
 
 // HELPERS
 function parseDate(dateStr) {
-  const [year, month, day] = dateStr.split("-");
+  if (!dateStr) return null;
+  const [year, month, day] = dateStr.toString().split("-");
   return new Date(year, parseInt(month) - 1, day);
 }
 
 function getDays(f, t) {
   const from = parseDate(f);
   const to = parseDate(t);
+  if (!from || !to) return 0;
   const days = Math.floor((to - from) / (1000 * 60 * 60 * 24)) + 1;
   return Math.max(0, days);
 }
@@ -651,11 +743,12 @@ function filterLeavesByPeriod(leaves, period) {
 function openDrawer(id) {
   window.activeCalendarDate = null;
   const m = MEMBERS.find(x => x.id === id);
-  const allLeaves = [...leaveData[id]].reverse();
-  const total = getActualLeaveDays(leaveData[id]);
-  const wfh = getWFHDays(leaveData[id]);
+  const memberLeaves = leaveData[id] || [];
+  const allLeaves = [...memberLeaves].reverse();
+  const total = getActualLeaveDays(memberLeaves);
+  const wfh = getWFHDays(memberLeaves);
   const period = window.drawerFilterPeriod || 'all';
-  const filteredLeaves = period === 'all' ? allLeaves : filterLeavesByPeriod([...leaveData[id]].reverse(), period);
+  const filteredLeaves = period === 'all' ? allLeaves : filterLeavesByPeriod([...memberLeaves].reverse(), period);
 
   let html = `
     <div class="drawer-member-info">
@@ -669,39 +762,63 @@ function openDrawer(id) {
         </div>
       </div>
     </div>
-    <button class="btn-leave" style="margin-bottom:1rem" onclick="closeDrawer(); openModal('${m.id}')">Apply</button>
+    <div style="display:flex;gap:8px;margin-bottom:1rem">
+      <button class="btn-leave" style="flex:1;margin-bottom:0" onclick="closeDrawer(); openModal('${m.id}')">Apply</button>
+      <button class="btn-edit-profile" onclick="openEditProfileModal('${m.id}')">Edit Profile</button>
+    </div>
 
-    <div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap">
-      <button class="filter-btn ${period === 'all' ? 'active' : ''}" onclick="setDrawerFilter('all', '${m.id}')">All</button>
-      <button class="filter-btn ${period === 'month' ? 'active' : ''}" onclick="setDrawerFilter('month', '${m.id}')">This Month</button>
-      <button class="filter-btn ${period === 'year' ? 'active' : ''}" onclick="setDrawerFilter('year', '${m.id}')">This Year</button>
-      <button class="filter-btn ${period === 'fiscal' ? 'active' : ''}" onclick="setDrawerFilter('fiscal', '${m.id}')">Fiscal Year</button>
+    <div style="display:flex;gap:6px;margin-bottom:1rem">
+      <button class="filter-btn ${period === 'all' ? 'active' : ''}" style="flex:1;white-space:nowrap;padding:6px 4px;font-size:11px" onclick="setDrawerFilter('all', '${m.id}')">All</button>
+      <button class="filter-btn ${period === 'month' ? 'active' : ''}" style="flex:1;white-space:nowrap;padding:6px 4px;font-size:11px" onclick="setDrawerFilter('month', '${m.id}')">This Month</button>
+      <button class="filter-btn ${period === 'year' ? 'active' : ''}" style="flex:1;white-space:nowrap;padding:6px 4px;font-size:11px" onclick="setDrawerFilter('year', '${m.id}')">This Year</button>
+      <button class="filter-btn ${period === 'fiscal' ? 'active' : ''}" style="flex:1;white-space:nowrap;padding:6px 4px;font-size:11px" onclick="setDrawerFilter('fiscal', '${m.id}')">Fiscal Year</button>
     </div>
   `;
 
   if (filteredLeaves.length === 0) {
     html += `<div class="no-leaves">No leave records</div>`;
   } else {
+    // Group records sharing the same date span (e.g. half Leave + half WFH on
+    // the same day) into a single card with both badges.
+    const grouped = [];
+    const byKey = {};
+    filteredLeaves.forEach(l => {
+      const key = `${l.from}|${l.to}`;
+      if (!byKey[key]) {
+        byKey[key] = { from: l.from, to: l.to, records: [] };
+        grouped.push(byKey[key]);
+      }
+      byKey[key].records.push(l);
+    });
+
     html += `<div class="leave-list">`;
-    filteredLeaves.forEach((l, idx) => {
-      const isWFH = (l.wfh || "No") === "Yes";
-      const span = getLeaveSpan(l);
-      const halfBubble = span === 0.5 ? `<span class="half-day-bubble ${isWFH ? 'wfh-yes' : 'wfh-no'}">Half Day</span>` : "";
+    grouped.forEach(g => {
+      const reason = g.records.map(r => r.reason).find(r => r) || "No reason provided";
 
-      const originalIdx = allLeaves.indexOf(l);
-
-      html += `
-        <div class="leave-row">
-          <button class="btn-delete-leave" onclick="deleteLeave('${m.id}', ${originalIdx}, this)" title="Delete record"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
-          <div class="leave-row-top">
-            <div class="leave-dates">${formatDate(l.from)}</div>
-          </div>
-          <div class="leave-reason-text">${l.reason || "No reason provided"}</div>
-          <div class="leave-label-row">
+      const badges = g.records.map(l => {
+        const isWFH = (l.wfh || "No") === "Yes";
+        const span = getLeaveSpan(l);
+        const halfBubble = span === 0.5 ? `<span class="half-day-bubble ${isWFH ? 'wfh-yes' : 'wfh-no'}">Half Day</span>` : "";
+        const originalIdx = allLeaves.indexOf(l);
+        return `
+          <span class="day-leave-item">
             <span class="wfh-badge ${isWFH ? 'wfh-yes' : 'wfh-no'}">
               ${isWFH ? '🏠 Work From Home' : '🏢 Leave'}
             </span>
             ${halfBubble}
+            <button class="btn-delete-leave-inline" onclick="deleteLeave('${m.id}', ${originalIdx}, this)" title="Delete record"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
+          </span>
+        `;
+      }).join("");
+
+      html += `
+        <div class="leave-row">
+          <div class="leave-row-top">
+            <div class="leave-dates">${formatDate(g.from)}</div>
+          </div>
+          <div class="leave-reason-text">${reason}</div>
+          <div class="leave-label-row">
+            ${badges}
           </div>
         </div>
       `;
@@ -827,7 +944,9 @@ async function loadMembers() {
     console.log("Members API response:", json);
 
     if (json.status === "success" && json.data && Array.isArray(json.data)) {
-      MEMBERS = json.data;
+      // Coerce id/pin to strings: Sheets stores all-digit values as numbers,
+      // which breaks the strict === id comparisons used across the app.
+      MEMBERS = json.data.map(m => ({ ...m, id: String(m.id), pin: String(m.pin) }));
       console.log("Loaded members from sheet:", MEMBERS);
     } else {
       console.log("No members from sheet, using default (empty)");
@@ -940,6 +1059,96 @@ function deleteMember(id) {
   })
   .catch(() => {
     showToast("Failed to delete member ❌", "error");
+  });
+}
+
+// EDIT PROFILE (ID + PIN)
+function openEditProfileModal(id) {
+  const m = MEMBERS.find(x => x.id === id);
+  if (!m) return;
+  window.editProfileContext = { originalId: id };
+  document.getElementById("editProfileName").textContent = m.name;
+  document.getElementById("editProfileId").value = m.id;
+  document.getElementById("editProfileNewPin").value = "";
+  document.getElementById("editProfileCurrentPin").value = "";
+  document.getElementById("editProfileError").style.display = "none";
+  document.getElementById("editProfileOverlay").classList.add("show");
+}
+
+function closeEditProfileModal() {
+  document.getElementById("editProfileOverlay").classList.remove("show");
+  window.editProfileContext = null;
+}
+
+function saveEditProfile() {
+  if (!window.editProfileContext) return;
+  const { originalId } = window.editProfileContext;
+  const member = MEMBERS.find(x => x.id === originalId);
+  if (!member) return;
+
+  const newId = document.getElementById("editProfileId").value.trim().toUpperCase();
+  const newPin = document.getElementById("editProfileNewPin").value.trim();
+  const currentPin = document.getElementById("editProfileCurrentPin").value.trim();
+  const errorEl = document.getElementById("editProfileError");
+
+  const showError = (msg) => {
+    errorEl.textContent = `❌ ${msg}`;
+    errorEl.style.display = "block";
+  };
+
+  // Authorize with the current PIN, like the delete flow.
+  if (currentPin !== member.pin) {
+    showError("Current PIN is incorrect.");
+    return;
+  }
+
+  if (!newId) {
+    showError("Professional ID cannot be empty.");
+    return;
+  }
+
+  // Keep the existing PIN if the field is left blank.
+  const finalPin = newPin === "" ? member.pin : newPin;
+  if (!/^\d{4}$/.test(finalPin)) {
+    showError("PIN must be 4 digits.");
+    return;
+  }
+
+  // Block collisions with another member's ID.
+  if (newId !== originalId && MEMBERS.some(m => m.id === newId)) {
+    showError("That Professional ID already exists.");
+    return;
+  }
+
+  const idChanged = newId !== originalId;
+  const payload = {
+    action: "editMember",
+    id: originalId,
+    newId: newId,
+    name: member.name,
+    role: member.role,
+    pin: finalPin,
+    bg: member.bg,
+    color: member.color
+  };
+
+  fetch(API_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+  .then(() => {
+    closeEditProfileModal();
+    showToast("Profile updated successfully");
+    // Reload so the user always sees fresh data from the sheet, never stale
+    // local values. Show the loading overlay immediately for visual feedback.
+    showLoadingOverlay();
+    // Small delay lets the no-cors write land before we refetch on reload.
+    setTimeout(() => window.location.reload(), 800);
+  })
+  .catch(() => {
+    showError("Failed to update profile. Please try again.");
   });
 }
 
@@ -1071,6 +1280,11 @@ function calculateSummary(startDate, endDate) {
         if (l.wfh === "Yes") {
           memberWFHDays += daysInRange;
           summary.totalWFHDays += daysInRange;
+          // A lone half-day WFH implies the other half is leave.
+          if (impliesHalfLeave(l, leaves)) {
+            memberLeaveDays += 0.5;
+            summary.totalLeaveDays += 0.5;
+          }
         } else {
           memberLeaveDays += daysInRange;
           summary.totalLeaveDays += daysInRange;
@@ -1102,14 +1316,13 @@ function renderSummaryTable(summaryData) {
   const tbody = document.getElementById("summaryTableBody");
 
   if (summaryData.members.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="no-data-msg">No absences found in the selected date range</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="no-data-msg">No absences found in the selected date range</td></tr>`;
     return;
   }
 
   tbody.innerHTML = summaryData.members.map(m => `
     <tr>
       <td><strong>${m.name}</strong></td>
-      <td>${m.id}</td>
       <td><span class="leave-count-badge">${m.leaveDays}</span></td>
       <td><span class="wfh-count">${m.wfhDays}</span></td>
       <td>${m.totalDays} day(s)</td>

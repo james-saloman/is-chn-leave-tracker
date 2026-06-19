@@ -26,7 +26,6 @@
         </div>
       </div>
       <div style="display:flex;gap:10px;">
-        <button class="btn-add-member" onclick="openAddMemberModal()">+ Add Professional</button>
         <button class="btn-add-member" onclick="window.open('https://staffing.docker.bwdesigngroup.dev/staffing', '_blank')" style="background:#4b5563;">🔗 Staffing</button>
       </div>
     </header>
@@ -123,6 +122,12 @@
         </div>
         <div class="calendar-days" id="calendarDays"></div>
       </div>
+      <div class="calendar-legend">
+        <span class="legend-item"><span class="legend-swatch legend-leave"></span>PTO</span>
+        <span class="legend-item"><span class="legend-swatch legend-wfh"></span>WFH</span>
+        <span class="legend-item"><span class="legend-swatch legend-half"></span>Half PTO</span>
+        <span class="legend-item"><span class="legend-swatch legend-split"></span>Half PTO + Half WFH</span>
+      </div>
       </div>
 
       <!-- SUMMARY VIEW -->
@@ -178,7 +183,6 @@
           <thead>
             <tr>
               <th>Professional Name</th>
-              <th>Professional ID</th>
               <th>Leave Days</th>
               <th>WFH Days</th>
               <th>Total Absences</th>
@@ -381,6 +385,35 @@
             <button class="delete-confirm-btn delete-confirm-btn-cancel" onclick="closeDeleteConfirmModal()">Cancel</button>
             <button class="delete-confirm-btn delete-confirm-btn-confirm" onclick="confirmDeleteWithPin()">Delete</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDIT PROFILE MODAL -->
+    <div class="overlay" id="editProfileOverlay">
+      <div class="modal">
+        <div class="modal-head">
+          <div>
+            <h3>Edit Profile</h3>
+            <p id="editProfileName">Update your ID and PIN</p>
+          </div>
+          <button class="modal-close" onclick="closeEditProfileModal()">&#x2715;</button>
+        </div>
+        <div class="modal-body">
+          <div class="member-form-row">
+            <label class="member-form-label">Professional ID</label>
+            <input type="text" class="member-form-input" id="editProfileId" placeholder="e.g., M014">
+          </div>
+          <div class="member-form-row">
+            <label class="member-form-label">New PIN (4 digits)</label>
+            <input type="text" class="member-form-input" id="editProfileNewPin" placeholder="Leave blank to keep current" maxlength="4" pattern="[0-9]{4}">
+          </div>
+          <div class="member-form-row">
+            <label class="member-form-label">Current PIN (to authorize)</label>
+            <input type="password" class="member-form-input" id="editProfileCurrentPin" placeholder="Enter current 4-digit PIN" maxlength="4">
+          </div>
+          <div class="delete-confirm-error" id="editProfileError" style="display:none">❌ Incorrect PIN. Please try again.</div>
+          <button class="btn-submit" onclick="saveEditProfile()">Save Changes</button>
         </div>
       </div>
     </div>

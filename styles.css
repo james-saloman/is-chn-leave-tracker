@@ -548,6 +548,54 @@ nav {
   color: #fff;
 }
 
+/* ===== CALENDAR LEGEND ===== */
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 0.5px solid var(--border);
+  flex-shrink: 0;
+}
+
+.legend-swatch.legend-leave {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+
+.legend-swatch.legend-wfh {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+/* Half-day PTO: solid red on the left, light red tint on the right — visible
+   enough to read as "partial" at swatch size. */
+.legend-swatch.legend-half {
+  background: linear-gradient(90deg, #ef4444 50%, #fecaca 50%);
+  border-color: #ef4444;
+}
+
+.legend-swatch.legend-split {
+  background: linear-gradient(90deg, #ef4444 50%, #3b82f6 50%);
+  border-color: #3b82f6;
+}
+
 /* ===== MEMBER FILTER ===== */
 .member-filter-wrap {
   display: flex;
@@ -700,6 +748,25 @@ nav {
   background: #1d4ed8;
 }
 
+.btn-edit-profile {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-family: 'DM Sans';
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.btn-edit-profile:hover {
+  background: var(--bg);
+  border-color: var(--accent);
+}
+
 .btn-add-member {
   background: var(--accent);
   color: #fff;
@@ -715,6 +782,48 @@ nav {
 
 .btn-add-member:hover {
   background: #1d4ed8;
+}
+
+/* "Add Professional" tile inside the Team Members grid */
+.add-member-card {
+  background: var(--card);
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 100%;
+  cursor: pointer;
+  color: var(--muted);
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.add-member-card:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--bg);
+}
+
+.add-member-plus {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.add-member-label {
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .btn-delete-member {
@@ -1375,6 +1484,37 @@ nav {
   font-weight: 500;
   padding: 3px 8px;
   border-radius: 20px;
+}
+
+/* Grouped day-absence card: one row per leave record (e.g. half Leave + half WFH) */
+.leave-label-row:has(.day-leave-item) {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.day-leave-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-delete-leave-inline {
+  background: transparent;
+  color: #dc2626;
+  border: none;
+  border-radius: 6px;
+  padding: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  margin-left: auto;
+}
+
+.btn-delete-leave-inline:hover {
+  background: rgba(220, 38, 38, 0.12);
 }
 
 .no-leaves {

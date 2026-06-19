@@ -31,6 +31,8 @@ function doPost(e) {
 
     if (data.action === "addMember") {
       return addMember(data);
+    } else if (data.action === "editMember") {
+      return editMember(data);
     } else if (data.action === "deleteMember") {
       return deleteMember(data);
     } else if (data.action === "deleteLeave") {
@@ -105,7 +107,7 @@ function getMembers() {
     const row = data[i];
     if (row[0]) {
       members.push({
-        id: row[0],
+        id: String(row[0]),
         name: row[1],
         role: row[2],
         pin: String(row[3]),
@@ -176,6 +178,71 @@ function deleteMember(data) {
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
+function editMember(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(MEMBERS_SHEET);
+
+  if (!sheet) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Members sheet not found"
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const oldId = (data.id || "").toString().trim();
+  const newId = (data.newId || "").toString().trim();
+  const newPin = (data.pin || "").toString();
+
+  if (!oldId || !newId) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Missing member id"
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const rows = sheet.getDataRange().getValues();
+  let targetRow = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    if ((rows[i][0] || "").toString().trim() === oldId) {
+      targetRow = i + 1; // sheet rows are 1-based
+      break;
+    }
+  }
+
+  if (!targetRow) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Member not found"
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Block collisions with another member's ID.
+  if (newId !== oldId) {
+    for (let i = 1; i < rows.length; i++) {
+      if ((i + 1) !== targetRow && (rows[i][0] || "").toString().trim() === newId) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: "error",
+          message: "That Professional ID already exists"
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+  }
+
+  // Update ID (col A) and PIN (col D) on the members sheet.
+  // Leave records are linked by Name (col B), not Member ID, so changing the
+  // ID here does not orphan any leave history — no re-keying needed.
+  // Force plain-text format so all-digit IDs/PINs aren't coerced to numbers
+  // (a numeric id breaks the frontend's strict === id comparison).
+  sheet.getRange(targetRow, 1).setNumberFormat("@").setValue(newId);
+  sheet.getRange(targetRow, 4).setNumberFormat("@").setValue(newPin);
+
+  return ContentService.createTextOutput(JSON.stringify({
+    status: "success",
+    message: "Member updated"
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
 function submitLeave(data) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAME);
@@ -220,7 +287,7 @@ function formatSheetDate(date) {
 
 function submitSkillAssessment(data) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const ASSESSMENT_SHEET = "Skill Assessment";
+  const ASSESSMENT_SHEET = "skill_assessment";
   let sheet = ss.getSheetByName(ASSESSMENT_SHEET);
 
   if (!sheet) {
