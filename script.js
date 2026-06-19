@@ -342,9 +342,9 @@ function updateOverviewMemberCards() {
       }
     }
 
-    // Perfect attendance: no PTO and no WFH for the active period.
-    // Only meaningful once leave data has actually loaded for the member.
-    const perfect = Number(total) === 0 && Number(wfh) === 0 && allLeaves.length === 0;
+    // Perfect attendance: no PTO and no WFH within the active period's records,
+    // so the highlight and confetti reflect the currently selected tab.
+    const perfect = Number(total) === 0 && Number(wfh) === 0 && filteredLeaves.length === 0;
     const perfectBadge = perfect
       ? '<div style="margin-top:6px"><span style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;font-size:10px;padding:3px 8px;border-radius:20px;font-weight:600">🏆 Perfect attendance</span></div>'
       : '';
@@ -566,14 +566,13 @@ function showAbsencesForDate(dateStr) {
       const badges = g.records.map(a => {
         const isWFH = a.wfh === "Yes";
         const span = getLeaveSpan(a);
-        const halfBubble = span === 0.5 ? `<span class="half-day-bubble ${isWFH ? 'wfh-yes' : 'wfh-no'}">Half Day</span>` : "";
+        const label = `${isWFH ? '🏠 Work From Home' : '🏢 Leave'}${span === 0.5 ? ' - Half Day' : ''}`;
         const originalIdx = reversedLeaves.indexOf(a.leaveRef);
         return `
           <span class="day-leave-item">
             <span class="wfh-badge ${isWFH ? 'wfh-yes' : 'wfh-no'}">
-              ${isWFH ? '🏠 Work From Home' : '🏢 Leave'}
+              ${label}
             </span>
-            ${halfBubble}
             <button class="btn-delete-leave-inline" onclick="deleteLeave('${g.id}', ${originalIdx}, this)" title="Delete record"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
           </span>
         `;
@@ -851,14 +850,13 @@ function openDrawer(id) {
       const badges = g.records.map(l => {
         const isWFH = (l.wfh || "No") === "Yes";
         const span = getLeaveSpan(l);
-        const halfBubble = span === 0.5 ? `<span class="half-day-bubble ${isWFH ? 'wfh-yes' : 'wfh-no'}">Half Day</span>` : "";
+        const label = `${isWFH ? '🏠 Work From Home' : '🏢 Leave'}${span === 0.5 ? ' - Half Day' : ''}`;
         const originalIdx = allLeaves.indexOf(l);
         return `
           <span class="day-leave-item">
             <span class="wfh-badge ${isWFH ? 'wfh-yes' : 'wfh-no'}">
-              ${isWFH ? '🏠 Work From Home' : '🏢 Leave'}
+              ${label}
             </span>
-            ${halfBubble}
             <button class="btn-delete-leave-inline" onclick="deleteLeave('${m.id}', ${originalIdx}, this)" title="Delete record"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
           </span>
         `;
