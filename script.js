@@ -40,6 +40,8 @@ function hideLoadingOverlay() {
       overlay.classList.add("hidden");
       setTimeout(() => overlay.remove(), 400);
     }
+    // Overlay is gone now — run the confetti celebration that was held back.
+    celebratePerfectAttendance();
   }, wait);
 }
 
@@ -340,8 +342,15 @@ function updateOverviewMemberCards() {
       }
     }
 
+    // Perfect attendance: no PTO and no WFH for the active period.
+    // Only meaningful once leave data has actually loaded for the member.
+    const perfect = Number(total) === 0 && Number(wfh) === 0 && allLeaves.length === 0;
+    const perfectBadge = perfect
+      ? '<div style="margin-top:6px"><span style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;font-size:10px;padding:3px 8px;border-radius:20px;font-weight:600">🏆 Perfect attendance</span></div>'
+      : '';
+
     return `
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem;text-align:center;cursor:pointer" onclick="openDrawer('${m.id}')">
+      <div class="overview-member-card${perfect ? ' perfect-attendance' : ''}" data-member-id="${m.id}" style="position:relative;overflow:hidden;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem;text-align:center;cursor:pointer" onclick="openDrawer('${m.id}')">
         <div style="width:48px;height:48px;border-radius:50%;background:${m.bg};color:${m.color};display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px;margin:0 auto 0.5rem">${getInitials(m.name)}</div>
         <div style="font-size:13px;font-weight:600;margin-bottom:2px">${m.name}</div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:0.5rem">${m.role}</div>
@@ -350,6 +359,7 @@ function updateOverviewMemberCards() {
           <span><strong style="color:var(--accent)">${total}</strong> PTO</span>
           ${wfh > 0 ? `<span>|  <strong style="color:#15803d">${wfh}</strong> WFH</span>` : ''}
         </div>
+        ${perfectBadge}
       </div>
     `;
   }).join("");
@@ -363,6 +373,49 @@ function updateOverviewMemberCards() {
   `;
 
   container.innerHTML = html + addCard;
+
+  celebratePerfectAttendance();
+}
+
+// Tracks which perfect-attendance cards have already celebrated this session,
+// so the 30s polling refresh doesn't re-fire confetti every cycle.
+const celebratedPerfect = new Set();
+
+// Fires a one-time triple confetti burst on each perfect-attendance card.
+// Skipped while the loading overlay is still up so the celebration isn't
+// wasted behind it — hideLoadingOverlay() re-invokes this once the overlay
+// is gone.
+function celebratePerfectAttendance() {
+  if (!loaderHidden) return;
+  const container = document.getElementById("overviewMemberCards");
+  if (!container) return;
+  const period = window.cardFilterPeriod || 'all';
+  container.querySelectorAll(".perfect-attendance").forEach(card => {
+    const key = `${card.getAttribute("data-member-id")}|${period}`;
+    if (celebratedPerfect.has(key)) return;
+    celebratedPerfect.add(key);
+    // Repeat the burst three times for a sustained celebration.
+    for (let n = 0; n < 3; n++) {
+      setTimeout(() => burstConfetti(card), n * 600);
+    }
+  });
+}
+
+function burstConfetti(card) {
+  const colors = ["#fbbf24", "#f59e0b", "#22c55e", "#3b82f6", "#ec4899", "#a855f7"];
+  const count = 28;
+  for (let i = 0; i < count; i++) {
+    const piece = document.createElement("span");
+    piece.className = "confetti-piece";
+    piece.style.left = `${50 + (Math.random() - 0.5) * 60}%`;
+    piece.style.background = colors[i % colors.length];
+    piece.style.setProperty("--dx", `${(Math.random() - 0.5) * 140}px`);
+    piece.style.setProperty("--dy", `${60 + Math.random() * 120}px`);
+    piece.style.setProperty("--rot", `${Math.random() * 720 - 360}deg`);
+    piece.style.animationDelay = `${Math.random() * 0.15}s`;
+    card.appendChild(piece);
+    piece.addEventListener("animationend", () => piece.remove());
+  }
 }
 
 function renderCalendar() {

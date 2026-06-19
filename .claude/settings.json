@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(curl -s http://localhost:8000/index.html)"
+      "Bash(curl -s http://localhost:8000/index.html)",
+      "Bash(curl -s \"https://script.google.com/macros/s/AKfycbxgYMKh6QNyntAwirW2kgl99vJlHVByPJAW3zjbcZusIBVAeeXc7HY7Dtm4MFRu7Fn0/exec?action=getMembers\")"
     ]
   }
 }
