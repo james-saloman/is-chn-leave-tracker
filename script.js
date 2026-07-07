@@ -21,6 +21,15 @@ let selectedColorIndex = 0;
 let currentCalendarDate = new Date();
 let activeFilter = "all";
 let currentView = "calendar";
+const SUMMARY_MIN_PREVIOUS_YEAR_COUNT = 2;
+const summaryYearExpanded = {
+  fiscal: false,
+  calendar: false
+};
+const summaryYearSelection = {
+  type: "fiscal",
+  year: null
+};
 
 // Tracks when the overlay first appeared so we can enforce a minimum display time.
 const LOADER_START = Date.now();
@@ -324,7 +333,7 @@ function updateOverviewMemberCards() {
   const container = document.getElementById("overviewMemberCards");
   const today = new Date().toISOString().split("T")[0];
   const todayAbsences = getAbsencesForDate(today);
-  const cardFilterPeriod = window.cardFilterPeriod || 'all';
+  const cardFilterPeriod = window.cardFilterPeriod || 'month';
 
   const html = MEMBERS.map(m => {
     const absence = todayAbsences.find(a => a.id === m.id);
@@ -389,7 +398,7 @@ function celebratePerfectAttendance() {
   if (!loaderHidden) return;
   const container = document.getElementById("overviewMemberCards");
   if (!container) return;
-  const period = window.cardFilterPeriod || 'all';
+  const period = window.cardFilterPeriod || 'month';
   container.querySelectorAll(".perfect-attendance").forEach(card => {
     const key = `${card.getAttribute("data-member-id")}|${period}`;
     if (celebratedPerfect.has(key)) return;
@@ -474,8 +483,13 @@ function renderCalendar() {
       }
     });
 
+    // Cap inline badges per day; the rest collapse into a "+N more" pill
+    // (clicking the day still opens the full list) instead of growing the
+    // cell indefinitely for a busy day.
+    const MAX_INLINE_BADGES = 2;
+    const memberGroups = Object.values(byMember);
     let badgesHtml = "";
-    Object.values(byMember).forEach(g => {
+    memberGroups.slice(0, MAX_INLINE_BADGES).forEach(g => {
       const parts = (g.name || "").trim().split(/\s+/).filter(Boolean);
       const label = parts.length > 1 ? `${parts[0]} ${parts[1][0]}` : (parts[0] || g.name);
       let badgeClass = "calendar-badge ";
@@ -487,6 +501,11 @@ function renderCalendar() {
       const titleSuffix = g.isHalf ? " (Half day)" : "";
       badgesHtml += `<div class="${badgeClass}" title="${g.name}${titleSuffix}">${label}</div>`;
     });
+    if (memberGroups.length > MAX_INLINE_BADGES) {
+      const hidden = memberGroups.slice(MAX_INLINE_BADGES);
+      const hiddenTitle = hidden.map(g => g.name).join(", ");
+      badgesHtml += `<div class="calendar-badge-more" title="${hiddenTitle}">+${hidden.length} more</div>`;
+    }
 
     dayEl.innerHTML = `
       <div class="calendar-day-num">${day.date.getDate()}</div>
@@ -560,14 +579,14 @@ function showAbsencesForDate(dateStr) {
 
     html += `<div class="leave-list">`;
     grouped.forEach(g => {
-      const reversedLeaves = [...(leaveData[g.id] || [])].reverse();
+      const sortedLeaves = sortLeavesDesc(leaveData[g.id] || []);
       const reason = g.records.map(r => r.reason).find(r => r) || "No reason provided";
 
       const badges = g.records.map(a => {
         const isWFH = a.wfh === "Yes";
         const span = getLeaveSpan(a);
         const label = `${isWFH ? '🏠 Work From Home' : '🏢 Leave'}${span === 0.5 ? ' - Half Day' : ''}`;
-        const originalIdx = reversedLeaves.indexOf(a.leaveRef);
+        const originalIdx = sortedLeaves.indexOf(a.leaveRef);
         return `
           <span class="day-leave-item">
             <span class="wfh-badge ${isWFH ? 'wfh-yes' : 'wfh-no'}">
@@ -636,16 +655,14 @@ function getWFHValue() {
   return type === "wfh" ? "Yes" : "No";
 }
 
-function selectAbsenceType(type) {
+function selectLeaveType(duration, type) {
+  document.getElementById("durationValue").value = duration;
   document.getElementById("absenceType").value = type;
-  document.getElementById("leaveBtn").classList.toggle("selected", type === "leave");
-  document.getElementById("wfhBtn").classList.toggle("selected", type === "wfh");
-}
-
-function selectDuration(value) {
-  document.getElementById("durationValue").value = value;
-  document.getElementById("fullDayBtn").classList.toggle("selected", value === 1);
-  document.getElementById("halfDayBtn").classList.toggle("selected", value === 0.5);
+  document.getElementById("ptoBtn").classList.toggle("selected", duration === 1 && type === "leave");
+  document.getElementById("wfhBtn").classList.toggle("selected", duration === 1 && type === "wfh");
+  document.getElementById("halfPtoBtn").classList.toggle("selected", duration === 0.5 && type === "leave");
+  document.getElementById("halfWfhBtn").classList.toggle("selected", duration === 0.5 && type === "wfh");
+  document.getElementById("wfhNote").style.display = type === "wfh" ? "block" : "none";
 }
 
 function submitLeave() {
@@ -716,6 +733,13 @@ function getDays(f, t) {
   const days = Math.floor((to - from) / (1000 * 60 * 60 * 24)) + 1;
   return Math.max(0, days);
 }
+// Newest-first by from-date. deleteLeave() re-derives this same order to map
+// a click's index back to a leave record, so every caller must use it rather
+// than a plain reverse().
+function sortLeavesDesc(leaves) {
+  return [...leaves].sort((a, b) => parseDate(b.from) - parseDate(a.from));
+}
+
 function getInitials(name) { return name.split(" ").map(n => n[0]).join("").toUpperCase(); }
 function getPin() { return ["p1","p2","p3","p4"].map(id => document.getElementById(id).value).join(""); }
 
@@ -752,10 +776,7 @@ function resetForm() {
   document.getElementById("leaveReason").value = "";
   ["p1","p2","p3","p4"].forEach(id => document.getElementById(id).value = "");
   document.getElementById("pinError").style.display = "none";
-  // Reset to Leave
-  selectAbsenceType("leave");
-  // Reset to Full Day
-  selectDuration(1);
+  selectLeaveType(1, "leave");
 }
 
 // Filter leaves by time period
@@ -775,10 +796,10 @@ function filterLeavesByPeriod(leaves, period) {
     case 'fiscal':
       if (today.getMonth() >= 9) {
         startDate = new Date(today.getFullYear(), 9, 1);
-        endDate = new Date(today.getFullYear() + 1, 8, 31);
+        endDate = new Date(today.getFullYear() + 1, 8, 30);
       } else {
         startDate = new Date(today.getFullYear() - 1, 9, 1);
-        endDate = new Date(today.getFullYear(), 8, 31);
+        endDate = new Date(today.getFullYear(), 8, 30);
       }
       break;
     default:
@@ -786,7 +807,10 @@ function filterLeavesByPeriod(leaves, period) {
   }
 
   return leaves.filter(l => {
-    const leaveStart = new Date(l.from);
+    // Local-midnight parse keeps this on the same timeline as startDate/endDate
+    // above; parsing "YYYY-MM-DD" as UTC would drop last-day-of-period leaves
+    // for any timezone ahead of UTC.
+    const leaveStart = parseDate(l.from);
     return leaveStart >= startDate && leaveStart <= endDate;
   });
 }
@@ -796,11 +820,11 @@ function openDrawer(id) {
   window.activeCalendarDate = null;
   const m = MEMBERS.find(x => x.id === id);
   const memberLeaves = leaveData[id] || [];
-  const allLeaves = [...memberLeaves].reverse();
+  const allLeaves = sortLeavesDesc(memberLeaves);
   const total = getActualLeaveDays(memberLeaves);
   const wfh = getWFHDays(memberLeaves);
   const period = window.drawerFilterPeriod || 'all';
-  const filteredLeaves = period === 'all' ? allLeaves : filterLeavesByPeriod([...memberLeaves].reverse(), period);
+  const filteredLeaves = period === 'all' ? allLeaves : filterLeavesByPeriod(sortLeavesDesc(memberLeaves), period);
 
   let html = `
     <div class="drawer-member-info">
@@ -905,8 +929,8 @@ function closeDrawer() { document.getElementById("drawerOverlay").classList.remo
 
 function deleteLeave(memberId, leaveIndex, btn) {
   const leaves = leaveData[memberId] || [];
-  const reversedLeaves = [...leaves].reverse();
-  const leave = reversedLeaves[leaveIndex];
+  const sortedLeaves = sortLeavesDesc(leaves);
+  const leave = sortedLeaves[leaveIndex];
   const member = MEMBERS.find(m => m.id === memberId);
 
   if (!leave || !member) return;
@@ -1239,19 +1263,157 @@ function switchView(view, el) {
 
 function getFiscalYearRange() {
   const today = new Date();
-  let fiscalStart, fiscalEnd;
+  return getFiscalYearRangeForStartYear(today.getMonth() >= 9 ? today.getFullYear() : today.getFullYear() - 1);
+}
 
-  if (today.getMonth() >= 9) {
-    // Oct-Dec: fiscal year is Oct (current year) to Sep (next year)
-    fiscalStart = new Date(today.getFullYear(), 9, 1);
-    fiscalEnd = new Date(today.getFullYear() + 1, 8, 30);
-  } else {
-    // Jan-Sep: fiscal year is Oct (previous year) to Sep (current year)
-    fiscalStart = new Date(today.getFullYear() - 1, 9, 1);
-    fiscalEnd = new Date(today.getFullYear(), 8, 30);
+function getFiscalYearRangeForStartYear(startYear) {
+  const year = Number(startYear);
+  return {
+    fiscalStart: new Date(year, 9, 1),
+    fiscalEnd: new Date(year + 1, 8, 30)
+  };
+}
+
+function getCalendarYearRange(year) {
+  const selectedYear = Number(year);
+  return {
+    calendarStart: new Date(selectedYear, 0, 1),
+    calendarEnd: new Date(selectedYear, 11, 31)
+  };
+}
+
+function getFiscalStartYearForDate(date) {
+  return date.getMonth() >= 9 ? date.getFullYear() : date.getFullYear() - 1;
+}
+
+function getCurrentFiscalStartYear() {
+  return getFiscalStartYearForDate(new Date());
+}
+
+function getSummaryYearOptionsFromData() {
+  const fiscalYears = new Set();
+  const calendarYears = new Set();
+
+  Object.values(leaveData).forEach(leaves => {
+    (leaves || []).forEach(l => {
+      const dates = [l.from, l.to].filter(Boolean).map(parseDate);
+      dates.forEach(date => {
+        if (!date || Number.isNaN(date.getTime())) {
+          console.warn("Skipping unparseable leave date for summary year options:", l);
+          return;
+        }
+        // Include years on both sides of today so leave logged ahead of time
+        // for a future year still gets its own dropdown entry.
+        calendarYears.add(date.getFullYear());
+        fiscalYears.add(getFiscalStartYearForDate(date));
+      });
+    });
+  });
+
+  return {
+    fiscalYears: Array.from(fiscalYears).sort((a, b) => b - a),
+    calendarYears: Array.from(calendarYears).sort((a, b) => b - a)
+  };
+}
+
+function formatFiscalYearLabel(startYear) {
+  const endYear = Number(startYear) + 1;
+  return `${startYear}-${String(endYear).slice(-2)}`;
+}
+
+function updateSummaryYearButton(label) {
+  const button = document.getElementById("summaryYearButton");
+  if (button) button.textContent = `${label} ▾`;
+}
+
+function createSummaryYearMenuButton(label, onSelect, closeOnSelect = false) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = label;
+  button.onclick = () => {
+    onSelect();
+    if (closeOnSelect) closeDropdownMenu("yearMenu");
+  };
+  return button;
+}
+
+function resetSummaryYearMenuToSelection() {
+  summaryYearExpanded.fiscal = summaryYearSelection.type === "fiscal";
+  summaryYearExpanded.calendar = summaryYearSelection.type === "calendar";
+}
+
+function renderSummaryYearTypeMenu() {
+  const menuContent = document.getElementById("summaryYearMenuContent");
+  if (!menuContent) return;
+
+  const yearOptions = getSummaryYearOptionsFromData();
+  menuContent.innerHTML = "";
+  renderSummaryYearSection(menuContent, "fiscal", yearOptions);
+  renderSummaryYearSection(menuContent, "calendar", yearOptions);
+}
+
+function getSummaryYearMenuData(type, yearOptions) {
+  const currentYear = new Date().getFullYear();
+  const currentFiscalStartYear = getCurrentFiscalStartYear();
+  const { fiscalYears, calendarYears } = yearOptions;
+  const years = type === "fiscal" ? fiscalYears : calendarYears;
+  const current = type === "fiscal" ? currentFiscalStartYear : currentYear;
+
+  // Always offer at least the last few previous years as a browsing starting
+  // point, even ones with no recorded leave; merge in any data-derived years too.
+  const allYears = new Set(years);
+  for (let offset = 1; offset <= SUMMARY_MIN_PREVIOUS_YEAR_COUNT; offset++) {
+    allYears.add(current - offset);
   }
+  allYears.delete(current);
 
-  return { fiscalStart, fiscalEnd };
+  return [current, ...Array.from(allYears).sort((a, b) => b - a)];
+}
+
+function renderSummaryYearSection(menuContent, type, yearOptions) {
+  const section = document.createElement("div");
+  section.className = "summary-year-current";
+
+  const isExpanded = summaryYearExpanded[type];
+  const headingLabel = type === "fiscal" ? "Fiscal Year" : "Calendar Year";
+  const heading = createSummaryYearMenuButton(
+    `${headingLabel} ${isExpanded ? "▴" : "▾"}`,
+    () => toggleSummaryYearSection(type)
+  );
+  heading.classList.add("summary-year-parent");
+  if (isExpanded) heading.classList.add("active");
+  section.appendChild(heading);
+
+  if (isExpanded) {
+    const yearsContainer = document.createElement("div");
+    yearsContainer.className = "summary-year-grid";
+
+    getSummaryYearMenuData(type, yearOptions).forEach(year => {
+      const label = type === "fiscal" ? `FY ${formatFiscalYearLabel(year)}` : String(year);
+      const onSelect = type === "fiscal" ? () => setFiscalYear(year) : () => setCalendarYear(year);
+      const option = createSummaryYearMenuButton(label, onSelect, true);
+      if (summaryYearSelection.type === type && summaryYearSelection.year === year) {
+        option.classList.add("selected");
+      }
+      yearsContainer.appendChild(option);
+    });
+
+    section.appendChild(yearsContainer);
+  }
+  menuContent.appendChild(section);
+}
+
+function toggleSummaryYearSection(type) {
+  summaryYearExpanded[type] = !summaryYearExpanded[type];
+  renderSummaryYearTypeMenu();
+}
+
+function onSummaryDateChange() {
+  // Manually edited dates deliberately decouple from any fiscal/calendar year preset.
+  summaryYearSelection.type = null;
+  summaryYearSelection.year = null;
+  updateSummaryYearButton("Select Year");
+  updateSummary();
 }
 
 function initSummaryDates() {
@@ -1259,22 +1421,31 @@ function initSummaryDates() {
   const { fiscalStart, fiscalEnd } = getFiscalYearRange();
   document.getElementById("summaryStartDate").valueAsDate = fiscalStart;
   document.getElementById("summaryEndDate").valueAsDate = fiscalEnd;
+  summaryYearSelection.type = "fiscal";
+  summaryYearSelection.year = getCurrentFiscalStartYear();
+  updateSummaryYearButton(`FY ${formatFiscalYearLabel(getCurrentFiscalStartYear())}`);
 }
 
-function setFiscalYear() {
-  const { fiscalStart, fiscalEnd } = getFiscalYearRange();
+function setFiscalYear(startYear = getCurrentFiscalStartYear()) {
+  const year = Number(startYear);
+  const { fiscalStart, fiscalEnd } = getFiscalYearRangeForStartYear(year);
   document.getElementById("summaryStartDate").valueAsDate = fiscalStart;
   document.getElementById("summaryEndDate").valueAsDate = fiscalEnd;
+  summaryYearSelection.type = "fiscal";
+  summaryYearSelection.year = year;
+  updateSummaryYearButton(`FY ${formatFiscalYearLabel(year)}`);
   updateSummary();
 }
 
-function setCalendarYear() {
-  const today = new Date();
-  const calendarStart = new Date(today.getFullYear(), 0, 1);
-  const calendarEnd = new Date(today.getFullYear(), 11, 31);
+function setCalendarYear(year = new Date().getFullYear()) {
+  const selectedYear = Number(year);
+  const { calendarStart, calendarEnd } = getCalendarYearRange(selectedYear);
 
   document.getElementById("summaryStartDate").valueAsDate = calendarStart;
   document.getElementById("summaryEndDate").valueAsDate = calendarEnd;
+  summaryYearSelection.type = "calendar";
+  summaryYearSelection.year = selectedYear;
+  updateSummaryYearButton(`CY ${selectedYear}`);
   updateSummary();
 }
 
@@ -1483,19 +1654,31 @@ function downloadSummaryPDF() {
 function toggleDropdownMenu(e, menuId) {
   e.stopPropagation();
   const menu = document.getElementById(menuId);
-  // Close any other open dropdown menus first.
-  document.querySelectorAll(".download-menu.show").forEach(m => {
+  if (!menu) return;
+
+  if (menu.classList.contains("show")) {
+    closeDropdownMenu(menuId);
+    return;
+  }
+
+  if (menuId === "yearMenu") {
+    resetSummaryYearMenuToSelection();
+    renderSummaryYearTypeMenu();
+  }
+  document.querySelectorAll(".dropdown-menu.show").forEach(m => {
     if (m !== menu) m.classList.remove("show");
   });
-  const isOpen = menu.classList.toggle("show");
-  // Close on the next outside click while the menu is open.
-  if (isOpen) {
-    document.addEventListener("click", () => closeDropdownMenu(menuId), { once: true });
-  }
+  menu.classList.add("show");
+  document.addEventListener("click", () => closeDropdownMenu(menuId), { once: true });
 }
 
 function closeDropdownMenu(menuId) {
-  document.getElementById(menuId).classList.remove("show");
+  const menu = document.getElementById(menuId);
+  if (menu) menu.classList.remove("show");
+  if (menuId === "yearMenu") {
+    summaryYearExpanded.fiscal = false;
+    summaryYearExpanded.calendar = false;
+  }
 }
 
 function downloadSummaryExcel() {

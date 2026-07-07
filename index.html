@@ -90,8 +90,8 @@
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:1rem">
             <h3 style="font-size:14px;font-weight:600;color:var(--text)">Team Members</h3>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <button class="filter-btn active" onclick="setCardFilter('all')">All</button>
-              <button class="filter-btn" onclick="setCardFilter('month')">This Month</button>
+              <button class="filter-btn" onclick="setCardFilter('all')">All</button>
+              <button class="filter-btn active" onclick="setCardFilter('month')">This Month</button>
               <button class="filter-btn" onclick="setCardFilter('year')">This Year</button>
               <button class="filter-btn" onclick="setCardFilter('fiscal')">Fiscal Year</button>
             </div>
@@ -136,24 +136,23 @@
           <div class="date-range-group">
             <div>
               <label for="summaryStartDate">From Date</label>
-              <input type="date" id="summaryStartDate" onchange="updateSummary()">
+              <input type="date" id="summaryStartDate" onchange="onSummaryDateChange()">
             </div>
             <div>
               <label for="summaryEndDate">To Date</label>
-              <input type="date" id="summaryEndDate" onchange="updateSummary()">
+              <input type="date" id="summaryEndDate" onchange="onSummaryDateChange()">
             </div>
           </div>
           <div class="date-range-group" style="gap:8px;">
-            <div class="download-dropdown">
-              <button class="btn-apply-range" onclick="toggleDropdownMenu(event, 'yearMenu')" style="background:#6366f1;">📅 Year ▾</button>
-              <div class="download-menu" id="yearMenu">
-                <button onclick="setFiscalYear(); closeDropdownMenu('yearMenu')">Fiscal Year</button>
-                <button onclick="setCalendarYear(); closeDropdownMenu('yearMenu')">Calendar Year</button>
+            <div class="summary-year-dropdown">
+              <button class="btn-apply-range" id="summaryYearButton" onclick="toggleDropdownMenu(event, 'yearMenu')" style="background:#6366f1;">Select Year ▾</button>
+              <div class="summary-year-menu dropdown-menu" id="yearMenu" onclick="event.stopPropagation()">
+                <div id="summaryYearMenuContent"></div>
               </div>
             </div>
             <div class="download-dropdown">
               <button class="btn-apply-range" onclick="toggleDropdownMenu(event, 'downloadMenu')" style="background:#059669;">Download ▾</button>
-              <div class="download-menu" id="downloadMenu">
+              <div class="download-menu dropdown-menu" id="downloadMenu">
                 <button onclick="downloadSummaryPDF(); closeDropdownMenu('downloadMenu')">PDF</button>
                 <button onclick="downloadSummaryExcel(); closeDropdownMenu('downloadMenu')">Excel</button>
               </div>
@@ -271,25 +270,18 @@
               <input type="date" class="form-input" id="leaveDate">
             </div>
 
-            <!-- Duration: Full Day / Half Day -->
+            <!-- Leave Type: PTO / WFH / Half PTO / Half WFH -->
             <div class="form-row">
-              <label class="form-label">Duration</label>
+              <label class="form-label">Leave Type</label>
               <div class="wfh-button-group">
-                <button type="button" class="wfh-btn selected" id="fullDayBtn" onclick="selectDuration(1)">Full Day</button>
-                <button type="button" class="wfh-btn" id="halfDayBtn" onclick="selectDuration(0.5)">Half Day</button>
+                <button type="button" class="wfh-btn selected" id="ptoBtn" onclick="selectLeaveType(1, 'leave')">PTO</button>
+                <button type="button" class="wfh-btn" id="wfhBtn" onclick="selectLeaveType(1, 'wfh')">WFH</button>
+                <button type="button" class="wfh-btn" id="halfPtoBtn" onclick="selectLeaveType(0.5, 'leave')">Half PTO</button>
+                <button type="button" class="wfh-btn" id="halfWfhBtn" onclick="selectLeaveType(0.5, 'wfh')">Half WFH</button>
               </div>
               <input type="hidden" id="durationValue" value="1">
-            </div>
-
-            <!-- Work From Home Buttons -->
-            <div class="form-row">
-              <label class="form-label">Absence Type</label>
-              <div class="wfh-button-group">
-                <button type="button" class="wfh-btn selected" id="leaveBtn" onclick="selectAbsenceType('leave')">Leave</button>
-                <button type="button" class="wfh-btn" id="wfhBtn" onclick="selectAbsenceType('wfh')">Work From Home</button>
-              </div>
               <input type="hidden" id="absenceType" value="leave">
-              <span class="wfh-note">⚠️ Work From Home days are not counted as leave.</span>
+              <span class="wfh-note" id="wfhNote" style="display:none">⚠️ Work From Home days are not counted as leave.</span>
             </div>
 
             <div class="form-row">
@@ -406,7 +398,7 @@
           </div>
           <div class="member-form-row">
             <label class="member-form-label">New PIN (4 digits)</label>
-            <input type="text" class="member-form-input" id="editProfileNewPin" placeholder="Leave blank to keep current" maxlength="4" pattern="[0-9]{4}">
+            <input type="password" class="member-form-input" id="editProfileNewPin" placeholder="Leave blank to keep current" maxlength="4" pattern="[0-9]{4}">
           </div>
           <div class="member-form-row">
             <label class="member-form-label">Current PIN (to authorize)</label>
