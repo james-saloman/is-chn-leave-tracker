@@ -1,5 +1,7 @@
-// Google Apps Script deployment URL
-const API_URL = "https://script.google.com/macros/s/AKfycbxgYMKh6QNyntAwirW2kgl99vJlHVByPJAW3zjbcZusIBVAeeXc7HY7Dtm4MFRu7Fn0/exec";
+// Supabase Edge Function API. All reads and writes (leave, members, skill
+// assessment) go through this function so table RLS can stay enabled.
+const API_URL = "https://trdkcpiolmjetjlhhwrz.supabase.co/functions/v1/tracker-api";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRyZGtjcGlvbG1qZXRqbGhod3J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MDc4NTgsImV4cCI6MjA5ODI4Mzg1OH0.yY2xGxlr0YnUE-VzyEapMTnfoI1qGsWuiAyuf7onGL0";
 
 const DEFAULT_MEMBERS = [];
 
@@ -11,13 +13,24 @@ const COLOR_PALETTE = [
   {bg:"#fef3c7", color:"#d97706"},
   {bg:"#fee2e2", color:"#dc2626"},
   {bg:"#fce7f3", color:"#be185d"},
-  {bg:"#dbeafe", color:"#0369a1"},
+  {bg:"#e0e7ff", color:"#4338ca"},
 ];
+
+// Deterministic per-member color, keyed by their (stable) id rather than
+// their position in the list — so colors don't reshuffle when members are
+// added, removed, or reordered.
+function getColorForMember(id) {
+  let hash = 0;
+  const str = String(id);
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return COLOR_PALETTE[Math.abs(hash) % COLOR_PALETTE.length];
+}
 
 let MEMBERS = [];
 let leaveData = {};
 let currentMemberId = null;
-let selectedColorIndex = 0;
 let currentCalendarDate = new Date();
 let activeFilter = "all";
 let currentView = "calendar";
@@ -68,6 +81,26 @@ function showLoadingOverlay() {
   overlay.classList.remove("hidden");
 }
 
+async function fetchTrackerApi(path = "", options = {}) {
+  const headers = {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    ...(options.headers || {})
+  };
+
+  const res = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers
+  });
+  const json = await res.json().catch(() => null);
+
+  if (!res.ok || !json || json.status !== "success") {
+    throw new Error((json && (json.message || json.error)) || `Request failed with ${res.status}`);
+  }
+
+  return json;
+}
+
 document.addEventListener("DOMContentLoaded", async function() {
   // Safety net: never let the overlay hang if the fetch never resolves.
   setTimeout(hideLoadingOverlay, 10000);
@@ -90,8 +123,11 @@ document.addEventListener("DOMContentLoaded", async function() {
     if (e.target === this) closeAddMemberModal();
   });
 
+  document.getElementById("drawerOverlay").addEventListener("click", function(e) {
+    if (e.target === this) closeDrawer();
+  });
+
   await loadMembers();
-  initColorPicker();
   initSummaryDates();
   init();
 });
@@ -116,25 +152,23 @@ function buildNav() {
 
 async function loadSheetData() {
   try {
-    const res = await fetch(API_URL);
-    const json = await res.json();
-    console.log("Leave data response:", json);
+    const json = await fetchTrackerApi();
+    console.log("Leave data response:", json.data);
 
     MEMBERS.forEach(m => leaveData[m.id] = []);
 
-    // Leave rows link to members by ID (sheet column C), but that column is
-    // often blank — in which case we fall back to matching by Name. This keeps
-    // history attached even after a member's ID is edited.
+    // Leave rows link to members by ID, with a name fallback for imported
+    // history or older records that may be missing professional_id.
     const nameToId = {};
     MEMBERS.forEach(m => { nameToId[(m.name || "").trim().toLowerCase()] = m.id; });
 
-    if (json.status === "success" && json.data) {
+    if (Array.isArray(json.data)) {
       json.data.forEach(row => {
         if (!row.from_leave || !row.end_leave) return;
 
         let memberId = null;
-        if (row.id && leaveData[row.id]) {
-          memberId = row.id;
+        if (row.id && leaveData[String(row.id)]) {
+          memberId = String(row.id);
         } else if (row.name) {
           memberId = nameToId[row.name.trim().toLowerCase()] || null;
         }
@@ -154,7 +188,7 @@ async function loadSheetData() {
     updateOverview();
 
   } catch (err) {
-    console.error("Error loading data:", err);
+    console.error("Error loading leave data:", err);
     renderCalendar();
     updateOverview();
   } finally {
@@ -205,7 +239,7 @@ function getWFHDays(leaves) {
 }
 
 function updateOverview() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = formatDateInputValue(new Date());
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const monthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
 
@@ -313,7 +347,7 @@ function updateTeamUtilization() {
     if (hasWFHThisMonth && !hasLeaveThisMonth) stats.wfh++;
   });
 
-  const todayStr = today.toISOString().split("T")[0];
+  const todayStr = formatDateInputValue(today);
   const membersOnLeaveToday = getAbsencesForDate(todayStr).filter(a => a.wfh !== "Yes").length;
   const activeToday = MEMBERS.length - membersOnLeaveToday;
   const html = `
@@ -331,7 +365,7 @@ function updateTeamUtilization() {
 
 function updateOverviewMemberCards() {
   const container = document.getElementById("overviewMemberCards");
-  const today = new Date().toISOString().split("T")[0];
+  const today = formatDateInputValue(new Date());
   const todayAbsences = getAbsencesForDate(today);
   const cardFilterPeriod = window.cardFilterPeriod || 'month';
 
@@ -465,6 +499,7 @@ function renderCalendar() {
 
     const dayEl = document.createElement("div");
     dayEl.className = "calendar-day";
+    if ([0, 6].includes(day.date.getDay())) dayEl.classList.add("weekend");
     if (day.otherMonth) dayEl.classList.add("other-month", "calendar-other-month");
     if (dateStr === today) dayEl.classList.add("today");
     if (absences.length > 0) dayEl.classList.add("has-leave");
@@ -512,7 +547,7 @@ function renderCalendar() {
       <div class="calendar-badges">${badgesHtml}</div>
     `;
 
-    if (!day.otherMonth && absences.length > 0) {
+    if (absences.length > 0) {
       dayEl.style.cursor = "pointer";
       dayEl.onclick = () => showAbsencesForDate(dateStr);
     }
@@ -528,11 +563,11 @@ function getAbsencesForDate(dateStr) {
   filtered.forEach(m => {
     const leaves = leaveData[m.id] || [];
     leaves.forEach(l => {
-      const start = new Date(l.from);
-      const end = new Date(l.to);
-      const current = new Date(dateStr);
+      const start = parseDate(l.from);
+      const end = parseDate(l.to);
+      const current = parseDate(dateStr);
 
-      if (current >= start && current <= end) {
+      if (start && end && current && current >= start && current <= end) {
         absences.push({
           id: m.id,
           name: m.name,
@@ -554,7 +589,7 @@ function getAbsencesForDate(dateStr) {
 function showAbsencesForDate(dateStr) {
   window.activeCalendarDate = dateStr;
   const absences = getAbsencesForDate(dateStr);
-  const dateObj = new Date(dateStr);
+  const dateObj = parseDate(dateStr);
   const dateDisplay = dateObj.toLocaleDateString("en-GB", {day: "2-digit", month: "short", year: "numeric"});
 
   let html = `<div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
@@ -678,7 +713,6 @@ function submitLeave() {
   if (isOverlapping(date, leaves)) { showToast("A record already exists for this date ❌", "error"); return; }
 
   const m = MEMBERS.find(x => x.id === currentMemberId);
-  if (pin !== m.pin) { document.getElementById("pinError").style.display = "block"; return; }
 
   const btn = document.getElementById("submitBtn");
   btn.disabled = true;
@@ -691,12 +725,12 @@ function submitLeave() {
     end_leave: date,
     reason: reason,
     wfh: wfh === "Yes" ? "Yes" : "No",
-    duration: duration
+    duration: duration,
+    pin: pin
   };
 
-  fetch(API_URL, {
+  fetchTrackerApi("", {
     method: "POST",
-    mode: "no-cors",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   })
@@ -712,8 +746,13 @@ function submitLeave() {
     document.getElementById("successText").textContent = label;
     loadSheetData();
   })
-  .catch(() => {
-    showToast("Submission failed ❌", "error");
+  .catch((err) => {
+    console.error("Leave submission failed:", err);
+    if ((err.message || "").includes("Incorrect PIN")) {
+      document.getElementById("pinError").style.display = "block";
+    } else {
+      showToast(err.message || "Submission failed ❌", "error");
+    }
     btn.disabled = false;
     btn.textContent = "Submit Leave Request";
   });
@@ -724,6 +763,10 @@ function parseDate(dateStr) {
   if (!dateStr) return null;
   const [year, month, day] = dateStr.toString().split("-");
   return new Date(year, parseInt(month) - 1, day);
+}
+
+function formatDateInputValue(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function getDays(f, t) {
@@ -954,13 +997,6 @@ function confirmDeleteWithPin() {
   const enteredPin = document.getElementById("deletePinInput").value;
   const { memberId, leave, member } = window.deleteContext;
 
-  if (enteredPin !== member.pin) {
-    document.getElementById("deletePinError").style.display = "block";
-    document.getElementById("deletePinInput").value = "";
-    return;
-  }
-
-  // PIN is correct, proceed with deletion
   const leaves = leaveData[memberId] || [];
   const payload = {
     action: "deleteLeave",
@@ -968,12 +1004,12 @@ function confirmDeleteWithPin() {
     name: member.name,
     from_leave: leave.from,
     end_leave: leave.to,
-    wfh: leave.wfh
+    wfh: leave.wfh,
+    pin: enteredPin
   };
 
-  fetch(API_URL, {
+  fetchTrackerApi("", {
     method: "POST",
-    mode: "no-cors",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   })
@@ -991,9 +1027,16 @@ function confirmDeleteWithPin() {
     }
     loadSheetData();
   })
-  .catch(() => {
-    showToast("Failed to delete record ❌", "error");
-    closeDeleteConfirmModal();
+  .catch((err) => {
+    console.error("Delete leave failed:", err);
+    if ((err.message || "").includes("Incorrect PIN")) {
+      document.getElementById("deletePinError").style.display = "block";
+      document.getElementById("deletePinInput").value = "";
+      document.getElementById("deletePinInput").focus();
+    } else {
+      showToast(err.message || "Failed to delete record ❌", "error");
+      closeDeleteConfirmModal();
+    }
   });
 }
 
@@ -1014,41 +1057,25 @@ function showToast(msg, type = "") {
 // MEMBER MANAGEMENT
 async function loadMembers() {
   try {
-    const res = await fetch(API_URL + "?action=getMembers");
-    const json = await res.json();
+    const json = await fetchTrackerApi("?action=getMembers");
     console.log("Members API response:", json);
 
     if (json.status === "success" && json.data && Array.isArray(json.data)) {
-      // Coerce id/pin to strings: Sheets stores all-digit values as numbers,
-      // which breaks the strict === id comparisons used across the app.
-      MEMBERS = json.data.map(m => ({ ...m, id: String(m.id), pin: String(m.pin) }));
-      console.log("Loaded members from sheet:", MEMBERS);
+      MEMBERS = json.data.map(m => {
+        const id = String(m.id);
+        const { bg, color } = getColorForMember(id);
+        return { id, name: m.name || "", role: m.role || "", bg, color };
+      });
+      console.log("Loaded members from tracker API:", MEMBERS);
     } else {
-      console.log("No members from sheet, using default (empty)");
+      console.log("No members from tracker API, using default (empty)");
       MEMBERS = [...DEFAULT_MEMBERS];
     }
   } catch (err) {
-    console.error("Error loading members from sheet:", err);
+    console.error("Error loading members from tracker API:", err);
     MEMBERS = [...DEFAULT_MEMBERS];
   }
   console.log("Final MEMBERS array:", MEMBERS);
-}
-
-function initColorPicker() {
-  const picker = document.getElementById("colorPicker");
-  picker.innerHTML = COLOR_PALETTE.map((c, i) => `
-    <div class="color-option ${i === 0 ? 'selected' : ''}"
-         onclick="selectColor(${i})"
-         style="background: linear-gradient(135deg, ${c.bg}, ${c.color});"
-         data-bg="${c.bg}" data-color="${c.color}"></div>
-  `).join("");
-}
-
-function selectColor(index) {
-  selectedColorIndex = index;
-  document.querySelectorAll(".color-option").forEach((el, i) => {
-    el.classList.toggle("selected", i === index);
-  });
 }
 
 function openAddMemberModal() {
@@ -1056,8 +1083,6 @@ function openAddMemberModal() {
   document.getElementById("memberId").value = "";
   document.getElementById("memberRole").value = "";
   document.getElementById("memberPin").value = "";
-  selectedColorIndex = 0;
-  initColorPicker();
   document.getElementById("addMemberOverlay").classList.add("show");
 }
 
@@ -1070,7 +1095,6 @@ function saveMember() {
   const id = document.getElementById("memberId").value.trim().toUpperCase();
   const role = document.getElementById("memberRole").value.trim();
   const pin = document.getElementById("memberPin").value.trim();
-  const {bg, color} = COLOR_PALETTE[selectedColorIndex];
 
   if (!name || !id || !role || !pin) {
     showToast("Please fill all fields", "error");
@@ -1089,12 +1113,11 @@ function saveMember() {
 
   const payload = {
     action: "addMember",
-    id, name, role, pin, bg, color
+    id, name, role, pin
   };
 
-  fetch(API_URL, {
+  fetchTrackerApi("", {
     method: "POST",
-    mode: "no-cors",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   })
@@ -1106,8 +1129,9 @@ function saveMember() {
       init();
     });
   })
-  .catch(() => {
-    showToast("Failed to add member ❌", "error");
+  .catch((err) => {
+    console.error("Add member failed:", err);
+    showToast(err.message || "Failed to add member ❌", "error");
   });
 }
 
@@ -1119,9 +1143,8 @@ function deleteMember(id) {
     id: id
   };
 
-  fetch(API_URL, {
+  fetchTrackerApi("", {
     method: "POST",
-    mode: "no-cors",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   })
@@ -1132,8 +1155,9 @@ function deleteMember(id) {
     buildNav();
     init();
   })
-  .catch(() => {
-    showToast("Failed to delete member ❌", "error");
+  .catch((err) => {
+    console.error("Delete member failed:", err);
+    showToast(err.message || "Failed to delete member ❌", "error");
   });
 }
 
@@ -1171,20 +1195,12 @@ function saveEditProfile() {
     errorEl.style.display = "block";
   };
 
-  // Authorize with the current PIN, like the delete flow.
-  if (currentPin !== member.pin) {
-    showError("Current PIN is incorrect.");
-    return;
-  }
-
   if (!newId) {
     showError("Professional ID cannot be empty.");
     return;
   }
 
-  // Keep the existing PIN if the field is left blank.
-  const finalPin = newPin === "" ? member.pin : newPin;
-  if (!/^\d{4}$/.test(finalPin)) {
+  if (newPin !== "" && !/^\d{4}$/.test(newPin)) {
     showError("PIN must be 4 digits.");
     return;
   }
@@ -1195,35 +1211,36 @@ function saveEditProfile() {
     return;
   }
 
-  const idChanged = newId !== originalId;
   const payload = {
     action: "editMember",
     id: originalId,
     newId: newId,
     name: member.name,
     role: member.role,
-    pin: finalPin,
-    bg: member.bg,
-    color: member.color
+    currentPin: currentPin,
+    newPin: newPin
   };
 
-  fetch(API_URL, {
+  fetchTrackerApi("", {
     method: "POST",
-    mode: "no-cors",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   })
   .then(() => {
     closeEditProfileModal();
     showToast("Profile updated successfully");
-    // Reload so the user always sees fresh data from the sheet, never stale
+    // Reload so the user always sees fresh data from the backend, never stale
     // local values. Show the loading overlay immediately for visual feedback.
     showLoadingOverlay();
-    // Small delay lets the no-cors write land before we refetch on reload.
     setTimeout(() => window.location.reload(), 800);
   })
-  .catch(() => {
-    showError("Failed to update profile. Please try again.");
+  .catch((err) => {
+    console.error("Edit profile failed:", err);
+    if ((err.message || "").includes("Incorrect PIN")) {
+      showError("Current PIN is incorrect.");
+    } else {
+      showError(err.message || "Failed to update profile. Please try again.");
+    }
   });
 }
 
@@ -1279,6 +1296,14 @@ function getCalendarYearRange(year) {
   return {
     calendarStart: new Date(selectedYear, 0, 1),
     calendarEnd: new Date(selectedYear, 11, 31)
+  };
+}
+
+function getCurrentMonthRange() {
+  const today = new Date();
+  return {
+    monthStart: new Date(today.getFullYear(), today.getMonth(), 1),
+    monthEnd: new Date(today.getFullYear(), today.getMonth() + 1, 0)
   };
 }
 
@@ -1417,20 +1442,21 @@ function onSummaryDateChange() {
 }
 
 function initSummaryDates() {
-  // Default the Summary page to the current fiscal year
-  const { fiscalStart, fiscalEnd } = getFiscalYearRange();
-  document.getElementById("summaryStartDate").valueAsDate = fiscalStart;
-  document.getElementById("summaryEndDate").valueAsDate = fiscalEnd;
-  summaryYearSelection.type = "fiscal";
-  summaryYearSelection.year = getCurrentFiscalStartYear();
-  updateSummaryYearButton(`FY ${formatFiscalYearLabel(getCurrentFiscalStartYear())}`);
+  // Default the Summary page to the current month; year presets remain
+  // available from the dropdown for broader fiscal/calendar summaries.
+  const { monthStart, monthEnd } = getCurrentMonthRange();
+  document.getElementById("summaryStartDate").value = formatDateInputValue(monthStart);
+  document.getElementById("summaryEndDate").value = formatDateInputValue(monthEnd);
+  summaryYearSelection.type = null;
+  summaryYearSelection.year = null;
+  updateSummaryYearButton("Select Year");
 }
 
 function setFiscalYear(startYear = getCurrentFiscalStartYear()) {
   const year = Number(startYear);
   const { fiscalStart, fiscalEnd } = getFiscalYearRangeForStartYear(year);
-  document.getElementById("summaryStartDate").valueAsDate = fiscalStart;
-  document.getElementById("summaryEndDate").valueAsDate = fiscalEnd;
+  document.getElementById("summaryStartDate").value = formatDateInputValue(fiscalStart);
+  document.getElementById("summaryEndDate").value = formatDateInputValue(fiscalEnd);
   summaryYearSelection.type = "fiscal";
   summaryYearSelection.year = year;
   updateSummaryYearButton(`FY ${formatFiscalYearLabel(year)}`);
@@ -1441,8 +1467,8 @@ function setCalendarYear(year = new Date().getFullYear()) {
   const selectedYear = Number(year);
   const { calendarStart, calendarEnd } = getCalendarYearRange(selectedYear);
 
-  document.getElementById("summaryStartDate").valueAsDate = calendarStart;
-  document.getElementById("summaryEndDate").valueAsDate = calendarEnd;
+  document.getElementById("summaryStartDate").value = formatDateInputValue(calendarStart);
+  document.getElementById("summaryEndDate").value = formatDateInputValue(calendarEnd);
   summaryYearSelection.type = "calendar";
   summaryYearSelection.year = selectedYear;
   updateSummaryYearButton(`CY ${selectedYear}`);
@@ -1468,7 +1494,60 @@ function updateSummary() {
 
   const summaryData = calculateSummary(startDate, endDate);
   renderSummaryStats(summaryData);
-  renderSummaryTable(summaryData);
+  currentSummaryData = summaryData;
+  applySummarySort();
+  renderSummaryTable(currentSummaryData);
+  updateSortArrows();
+}
+
+let currentSummaryData = null;
+let summarySortColumn = "name";
+let summarySortDir = "asc";
+
+function sortSummaryTable(column) {
+  if (!currentSummaryData) return;
+
+  summarySortDir = summarySortColumn === column && summarySortDir === "asc" ? "desc" : "asc";
+  summarySortColumn = column;
+
+  applySummarySort();
+  renderSummaryTable(currentSummaryData);
+  updateSortArrows();
+}
+
+function sortMembersByCurrentSort(members) {
+  if (!summarySortColumn) return members;
+
+  const dir = summarySortDir === "asc" ? 1 : -1;
+  const column = summarySortColumn;
+  members.sort((a, b) => {
+    const valA = a[column];
+    const valB = b[column];
+    if (typeof valA === "string") return valA.localeCompare(valB) * dir;
+    return (valA - valB) * dir;
+  });
+  return members;
+}
+
+function applySummarySort() {
+  if (!currentSummaryData) return;
+  sortMembersByCurrentSort(currentSummaryData.members);
+}
+
+function updateSortArrows() {
+  document.querySelectorAll(".summary-table th.sortable").forEach(th => {
+    th.classList.remove("sort-active");
+  });
+  document.querySelectorAll(".sort-arrow").forEach(el => {
+    el.textContent = "↓";
+  });
+
+  if (summarySortColumn) {
+    const th = document.querySelector(`.summary-table th[data-sort="${summarySortColumn}"]`);
+    if (th) th.classList.add("sort-active");
+    const arrow = document.getElementById(`sortArrow-${summarySortColumn}`);
+    if (arrow) arrow.textContent = summarySortDir === "asc" ? "↑" : "↓";
+  }
 }
 
 function calculateSummary(startDate, endDate) {
@@ -1564,6 +1643,7 @@ function downloadSummaryPDF() {
   const startDate = new Date(startStr);
   const endDate = new Date(endStr);
   const summaryData = calculateSummary(startDate, endDate);
+  sortMembersByCurrentSort(summaryData.members);
 
   // Create PDF content
   const element = document.createElement("div");
@@ -1696,6 +1776,7 @@ function downloadSummaryExcel() {
   }
 
   const summaryData = calculateSummary(new Date(startStr), new Date(endStr));
+  sortMembersByCurrentSort(summaryData.members);
 
   // Build worksheet rows: title block, totals, then the per-member table.
   const rows = [
@@ -1872,7 +1953,6 @@ async function saSubmitForm() {
     name,
     background: document.getElementById('sa-bg').value || '—',
     experience: document.getElementById('sa-exp').value || '—',
-    submitted_at: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
   };
 
   SA_DOMAINS.forEach(domain => {
@@ -1883,9 +1963,8 @@ async function saSubmitForm() {
   });
 
   try {
-    await fetch(API_URL, {
+    await fetchTrackerApi("", {
       method: 'POST',
-      mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(row),
     });

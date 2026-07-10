@@ -287,6 +287,27 @@ nav {
   border-bottom: 2px solid var(--border);
 }
 
+.summary-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.summary-table th.sortable:hover {
+  color: var(--text);
+}
+
+.sort-arrow {
+  display: inline-block;
+  margin-left: 4px;
+  opacity: 0.35;
+  font-size: 11px;
+}
+
+.summary-table th.sort-active .sort-arrow {
+  opacity: 1;
+  color: var(--primary);
+}
+
 .summary-table td {
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
@@ -525,6 +546,11 @@ nav {
   letter-spacing: 0.6px;
 }
 
+.calendar-weekday:first-child,
+.calendar-weekday:last-child {
+  color: var(--danger);
+}
+
 .calendar-days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -541,7 +567,6 @@ nav {
   flex-direction: column;
   align-items: flex-start;
   justify-content: flex-start;
-  cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
   background: #ffffff;
@@ -570,11 +595,30 @@ nav {
 .calendar-day.has-leave {
   background: #fef5f5;
   color: #1a1a1a;
+  cursor: pointer;
 }
 
 .calendar-day.has-leave .calendar-day-num {
   color: #1a1a1a;
   font-weight: 700;
+}
+
+.calendar-day.weekend:not(.other-month) .calendar-day-num {
+  color: var(--danger);
+}
+
+.calendar-day.other-month.has-leave {
+  background: #f5f5f5;
+  color: #999;
+}
+
+.calendar-day.other-month.has-leave .calendar-day-num {
+  color: #ccc;
+}
+
+.calendar-day.other-month:not(.has-leave):hover {
+  background: #f5f5f5;
+  box-shadow: none;
 }
 
 .calendar-day-num {
@@ -954,28 +998,6 @@ nav {
 
 .btn-delete-member:hover {
   background: #b91c1c;
-}
-
-/* ===== COLOR PICKER ===== */
-.color-picker {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 4px;
-}
-
-.color-option {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 0.2s;
-}
-
-.color-option.selected {
-  border-color: #1e293b;
-  box-shadow: 0 0 0 2px #fff;
 }
 
 /* ===== MEMBER FORM ===== */

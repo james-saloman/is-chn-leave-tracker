@@ -181,10 +181,10 @@
         <table class="summary-table">
           <thead>
             <tr>
-              <th>Professional Name</th>
-              <th>Leave Days</th>
-              <th>WFH Days</th>
-              <th>Total Absences</th>
+              <th class="sortable" data-sort="name" onclick="sortSummaryTable('name')">Professional Name <span class="sort-arrow" id="sortArrow-name">↓</span></th>
+              <th class="sortable" data-sort="leaveDays" onclick="sortSummaryTable('leaveDays')">Leave Days <span class="sort-arrow" id="sortArrow-leaveDays">↓</span></th>
+              <th class="sortable" data-sort="wfhDays" onclick="sortSummaryTable('wfhDays')">WFH Days <span class="sort-arrow" id="sortArrow-wfhDays">↓</span></th>
+              <th class="sortable" data-sort="totalDays" onclick="sortSummaryTable('totalDays')">Total Absences <span class="sort-arrow" id="sortArrow-totalDays">↓</span></th>
             </tr>
           </thead>
           <tbody id="summaryTableBody">
@@ -350,10 +350,6 @@
           <div class="member-form-row">
             <label class="member-form-label">PIN (4 digits)</label>
             <input type="text" class="member-form-input" id="memberPin" placeholder="1234" maxlength="4" pattern="[0-9]{4}">
-          </div>
-          <div class="member-form-row">
-            <label class="member-form-label">Avatar Color</label>
-            <div class="color-picker" id="colorPicker"></div>
           </div>
           <button class="btn-submit" onclick="saveMember()">Add Professional</button>
         </div>
